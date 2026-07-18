@@ -1492,6 +1492,18 @@ tbody td.cell-hours { min-width: 3.5rem; }
     // Language
     langSelect.addEventListener('change', () => {
       state.lang = langSelect.value;
+      // Auto-switch to matching holiday country when language changes
+      if (state.lang === 'pl' && state.holidayCountry !== 'PL') {
+        state.holidayCountry = 'PL';
+        holidaySelect.value = 'PL';
+        computeHolidays();
+        render();
+      } else if (state.lang === 'en' && state.holidayCountry === 'PL') {
+        state.holidayCountry = 'GB';
+        holidaySelect.value = 'GB';
+        computeHolidays();
+        render();
+      }
       initMonthSelect();
       populateHolidaySelect();
       applyLanguage(state.lang);
