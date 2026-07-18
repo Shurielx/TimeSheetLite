@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator Listy Obecności</title>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+@media (min-width: 1920px) { html { font-size: 18px; } }
+@media (min-width: 2560px) { html { font-size: 20px; } }
+@media (min-width: 3840px) { html { font-size: 22px; } }
+
+/* ===== THEME VARIABLES ===== */
+:root {
+  --bg-body: #e6e9ef;
+  --bg-panel: #ffffff;
+  --bg-input: #f8f9fc;
+  --bg-input-focus: #fff;
+  --bg-year-hover: #eef0f4;
+  --bg-employee-item: #f8f9fc;
+  --bg-remove-hover: #fee2e2;
+  --bg-btn-secondary: #eef0f4;
+  --bg-btn-secondary-hover: #dce0e8;
+  --bg-sheet: #ffffff;
+  --bg-sheet-page: #fff;
+  --bg-special: #eaeaea;
+  --bg-hover-td: #f0f0f0;
+  --bg-popup: #fff;
+  --text-primary: #1e1e2e;
+  --text-heading: #111;
+  --text-label: #6c6f85;
+  --text-summary: #6c6f85;
+  --border-default: #d4d8e0;
+  --border-light: #eef0f4;
+  --border-table: #000;
+  --border-focus: #3b82f6;
+  --shadow-panel: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-popup: 0 4px 16px rgba(0,0,0,0.12);
+  --slider-bg: #c8cdd8;
+}
+
+html.dark-mode {
+  --bg-body: #121212;
+  --bg-panel: #1e1e1e;
+  --bg-input: #2a2a2a;
+  --bg-input-focus: #333;
+  --bg-year-hover: #333;
+  --bg-employee-item: #2a2a2a;
+  --bg-remove-hover: #3a1a1a;
+  --bg-btn-secondary: #333;
+  --bg-btn-secondary-hover: #444;
+  --bg-sheet: #ffffff;
+  --bg-sheet-page: #fff;
+  --bg-special: #3a3a3a;
+  --bg-hover-td: #333;
+  --bg-popup: #2a2a2a;
+  --text-primary: #e0e0e0;
+  --text-heading: #eee;
+  --text-label: #aaa;
+  --text-summary: #aaa;
+  --border-default: #444;
+  --border-light: #333;
+  --border-table: #000;
+  --border-focus: #5b9cf6;
+  --shadow-panel: 0 2px 12px rgba(0,0,0,0.4);
+  --shadow-popup: 0 4px 16px rgba(0,0,0,0.5);
+  --slider-bg: #555;
+}
+
+html.dark-mode.dark-sheet {
+  --bg-sheet: #1a1a1a;
+  --bg-sheet-page: #1a1a1a;
+  --bg-special: #2a2a2a;
+  --bg-hover-td: #2a2a2a;
+  --border-table: #555;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg-body);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== PRINT STYLES ===== */
+@page { size: A4 portrait; margin: 1cm; }
+
+@media print {
+  body { background: none; }
+  #ui-panel { display: none !important; }
+  #sheet-container {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+  }
+  #sheet-container .sheet-page {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  table { font-size: 9pt !important; }
+  th, td { padding: 3px 4px !important; }
+  html.dark-mode,
+  html.dark-mode.dark-sheet {
+    --bg-special: #e0e0e0;
+    --bg-sheet: white;
+    --bg-sheet-page: white;
+    --border-table: #000;
+    --text-primary: black;
+    --text-heading: black;
+    --text-label: black;
+  }
+  .special-day { background: #e0e0e0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .edit-controls, .edit-badge { display: none !important; }
+  tbody td:first-child { cursor: default !important; }
+}
+
+/* ===== LAYOUT ===== */
+#app {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  max-width: 1800px;
+  margin: 0 auto;
+  width: 100%;
+  align-items: flex-start;
+}
+
+/* ===== UI PANEL ===== */
+#ui-panel {
+  flex: 0 0 320px;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  box-shadow: var(--shadow-panel);
+  padding: 1.5rem;
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+
+#ui-panel h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-light);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.control-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-label);
+}
+
+.control-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.control-row select,
+.control-row input[type="number"] {
+  flex: 1;
+  padding: 0.5rem 0.6rem;
+  border: 1.5px solid var(--border-default);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.control-row select:focus,
+.control-row input[type="number"]:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-input-focus);
+}
+
+.control-row input[type="number"] { width: 5rem; flex: 0 0 5rem; }
+
+/* Year picker */
+.year-picker {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.year-btn {
+  padding: 0.5rem 1rem;
+  border: 1.5px solid var(--border-default);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 5rem;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.year-btn:hover, .year-btn:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-input-focus);
+}
+
+.year-btn::after {
+  content: "▾";
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.year-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-popup);
+  border: 1.5px solid var(--border-default);
+  border-radius: 10px;
+  box-shadow: var(--shadow-popup);
+  padding: 0.5rem;
+  display: none;
+  z-index: 100;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.35rem;
+  min-width: 160px;
+}
+
+.year-popup.open {
+  display: grid;
+}
+
+.year-tile {
+  padding: 0.5rem 0.3rem;
+  border: 1.5px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.12s;
+}
+
+.year-tile:hover {
+  background: var(--bg-year-hover);
+  border-color: var(--border-focus);
+  color: var(--border-focus);
+}
+
+.year-tile.selected {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+/* Toggle switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch .slider {
+  position: absolute;
+  inset: 0;
+  background: var(--slider-bg);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-switch .slider::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .slider { background: #3b82f6; }
+.toggle-switch input:checked + .slider::before { transform: translateX(20px); }
+
+.toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.edit-badge {
+  font-size: 0.7rem;
+  color: #3b82f6;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.edit-badge.active { opacity: 1; }
+
+/* Buttons */
+.btn-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-primary { background: #3b82f6; color: #fff; }
+.btn-primary:hover { background: #2563eb; }
+.btn-primary:disabled { background: #a0b8e0; cursor: not-allowed; }
+
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn-danger:disabled { background: #e0a0a0; cursor: not-allowed; }
+
+.btn-secondary { background: var(--bg-btn-secondary); color: var(--text-primary); }
+.btn-secondary:hover { background: var(--bg-btn-secondary-hover); }
+
+.btn-print {
+  background: #111;
+  color: #fff;
+  width: 100%;
+  justify-content: center;
+  padding: 0.65rem;
+  font-size: 0.95rem;
+}
+
+.btn-print:hover { background: #333; }
+
+html.dark-mode .btn-print {
+  background: #3b82f6;
+}
+html.dark-mode .btn-print:hover {
+  background: #2563eb;
+}
+
+/* Employee list in edit mode */
+.employee-list { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.employee-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-employee-item);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.employee-item .emp-remove:hover { background: var(--bg-remove-hover); }
+
+.employee-item .emp-name { flex: 1; }
+
+.employee-item .emp-remove {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+
+
+/* ===== SHEET CONTAINER ===== */
+#sheet-container {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-sheet);
+  border-radius: 12px;
+  box-shadow: var(--shadow-panel);
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+#sheet-container .sheet-page {
+  width: 100%;
+  max-width: 210mm;
+  background: var(--bg-sheet-page);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ===== TABLE ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Main header */
+.main-header {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.65rem 0.5rem;
+  border: 2px solid var(--border-table);
+  background: var(--bg-sheet-page);
+  letter-spacing: 0.02em;
+}
+
+/* Column headers */
+thead th {
+  border: 1px solid var(--border-table);
+  padding: 0.4rem 0.35rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-align: center;
+  vertical-align: middle;
+  background: var(--bg-sheet-page);
+}
+
+thead th.employee-name {
+  font-size: 0.85rem;
+  min-width: 5rem;
+}
+
+thead th.sub-header {
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+/* Corner cell spanning the "Dzień" label */
+thead th.corner-cell {
+  border: 1px solid var(--border-table);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Body cells */
+tbody td {
+  border: 1px solid var(--border-table);
+  padding: 0.3rem 0.35rem;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 0.75rem;
+}
+
+tbody td:first-child {
+  font-weight: 700;
+  min-width: 2.8rem;
+  cursor: default;
+}
+
+tbody td:first-child:hover { background: var(--bg-hover-td); }
+
+tbody td.cell-status { min-width: 3rem; }
+tbody td.cell-hours { min-width: 3.5rem; }
+
+/* Weekend / special day row */
+.special-day {
+  background: var(--bg-special);
+}
+
+/* Edit mode cursor */
+.edit-mode tbody td:first-child { cursor: default; }
+.edit-mode tbody td:first-child:hover { background: transparent; }
+
+/* Day special toggle checkbox */
+.day-special-toggle {
+  margin-left: 6px;
+  cursor: pointer;
+  vertical-align: middle;
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+}
+
+.edit-mode tbody td:first-child span[contenteditable] {
+  cursor: text;
+}
+
+/* Dev settings */
+.dev-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  #app { flex-direction: column; }
+  #ui-panel {
+    flex: none;
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+  #sheet-container { padding: 1rem; }
+}
+
+@media (max-width: 600px) {
+  #app { padding: 0.75rem; gap: 0.75rem; }
+  #ui-panel { padding: 1rem; }
+  #sheet-container { padding: 0.5rem; border-radius: 8px; }
+  table { font-size: 0.65rem; }
+  thead th { padding: 0.25rem 0.2rem; }
+  tbody td { padding: 0.2rem 0.2rem; }
+  .main-header { font-size: 0.85rem; padding: 0.4rem 0.3rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- UI Panel -->
+  <aside id="ui-panel">
+    <h1>⚙️ Generator Listy</h1>
+
+    <div class="control-group">
+      <label data-i18n="monthYear">Miesiąc i rok</label>
+      <div class="control-row">
+        <select id="month-select"></select>
+        <div class="year-picker" id="year-picker">
+          <button class="year-btn" id="year-btn">2026</button>
+          <div class="year-popup" id="year-popup"></div>
+        </div>
+        <button class="btn btn-secondary" id="today-btn" title="Obecny miesiąc / Current month" style="padding:0.5rem 0.7rem;font-size:0.9rem;">📅</button>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label data-i18n="monthLabel">Nazwa miesiąca (opcjonalnie)</label>
+      <div class="control-row">
+        <input type="text" id="month-label" placeholder="np. LIPIEC 2026" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+      </div>
+    </div>
+
+	    <div class="toggle-row">
+	      <label class="toggle-switch">
+	        <input type="checkbox" id="edit-toggle">
+	        <span class="slider"></span>
+	      </label>
+	      <span class="toggle-label" data-i18n="editMode">Tryb edycji</span>
+	      <span class="edit-badge" id="edit-badge">EDYTUJ</span>
+	    </div>
+
+	    <div class="toggle-row">
+	      <label class="toggle-switch">
+	        <input type="checkbox" id="dark-toggle">
+	        <span class="slider"></span>
+	      </label>
+	      <span class="toggle-label" data-i18n="darkMode">Dark mode</span>
+	    </div>
+
+    <div class="edit-controls" id="edit-controls" style="display:none;">
+      <div class="control-group">
+        <label data-i18n="employees">Pracownicy</label>
+        <div class="employee-list" id="employee-list"></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="add-employee-btn">➕ <span data-i18n="add">Dodaj</span></button>
+        <button class="btn btn-danger" id="remove-employee-btn" disabled>✕ <span data-i18n="remove">Usuń</span></button>
+      </div>
+    </div>
+
+    <!-- Language toggle -->
+    <div class="control-group" style="border-top:2px solid var(--border-light);padding-top:0.75rem;">
+    	      <label data-i18n="language">Język / Language</label>
+      <div class="control-row">
+        <select id="lang-select" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+          <option value="pl">🇵🇱 Polski</option>
+          <option value="en">🇬🇧 English</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Dev settings (collapsible) -->
+    <details id="dev-settings" style="border-top:2px solid var(--border-light);padding-top:0.75rem;">
+      <summary style="cursor:pointer;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-summary);user-select:none;" data-i18n="devSettings">⚙️ Ustawienia</summary>
+      <div class="dev-settings">
+        <div class="control-group">
+          <label>
+            <div class="toggle-row" style="margin-bottom:0.25rem;">
+              <label class="toggle-switch">
+                <input type="checkbox" id="dark-sheet-toggle">
+                <span class="slider"></span>
+              </label>
+              <span class="toggle-label" data-i18n="darkSheet" style="font-size:0.85rem;text-transform:none;letter-spacing:0;font-weight:500;">Dark Sheet</span>
+            </div>
+          </label>
+        </div>
+        <div class="control-group">
+          <label data-i18n="holidaySource">Źródło świąt</label>
+          <div class="control-row">
+            <select id="holiday-source" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+              <option value="local">🇵🇱 Polska (lokalnie)</option>
+              <option value="api">🌐 API (Nager.Date)</option>
+            </select>
+          </div>
+        </div>
+        <div class="control-group" id="holiday-country-group" style="display:none;">
+          <label data-i18n="holidayCountry">Kraj (API)</label>
+          <div class="control-row">
+            <select id="holiday-country" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+              <option value="PL">🇵🇱 Polska</option>
+              <option value="DE">🇩🇪 Niemcy</option>
+              <option value="GB">🇬🇧 Wielka Brytania</option>
+              <option value="US">🇺🇸 USA</option>
+              <option value="FR">🇫🇷 Francja</option>
+              <option value="ES">🇪🇸 Hiszpania</option>
+              <option value="IT">🇮🇹 Włochy</option>
+              <option value="UA">🇺🇦 Ukraina</option>
+              <option value="CZ">🇨🇿 Czechy</option>
+              <option value="SK">🇸🇰 Słowacja</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div style="margin-top:auto;padding-top:0.5rem;border-top:2px solid var(--border-light);">
+      <button class="btn btn-print" id="print-btn">🖨️ <span data-i18n="print">Drukuj / Zapisz PDF</span></button>
+    </div>
+  </aside>
+
+  <!-- Sheet Preview -->
+  <main id="sheet-container">
+    <div class="sheet-page">
+      <table id="attendance-table">
+        <thead id="table-head">
+          <!-- Dynamically built -->
+        </thead>
+        <tbody id="table-body">
+          <!-- Dynamically built -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ===== STATE =====
+  const state = {
+    month: 7,          // 0-based
+    year: 2026,
+    monthLabel: '',
+    employees: ['Jan Kowalski', 'Anna Nowak', 'Piotr Wiśniewski'],
+    editMode: false,
+    darkMode: false,
+    darkSheet: false,
+    specialDays: new Set(), // "YYYY-MM-DD" manually marked special
+    normalDays: new Set(),  // "YYYY-MM-DD" manually marked normal (overrides holidays/weekends)
+    holidays: new Set(),   // computed holidays
+    lang: 'pl',
+    holidaySource: 'local',
+    holidayCountry: 'PL',
+  };
+
+  // ===== DOM REFS =====
+  const monthSelect = document.getElementById('month-select');
+  const yearPicker = document.getElementById('year-picker');
+  const yearBtn = document.getElementById('year-btn');
+  const yearPopup = document.getElementById('year-popup');
+  const monthLabelInput = document.getElementById('month-label');
+  const editToggle = document.getElementById('edit-toggle');
+  const editBadge = document.getElementById('edit-badge');
+  const editControls = document.getElementById('edit-controls');
+  const employeeList = document.getElementById('employee-list');
+  const addEmployeeBtn = document.getElementById('add-employee-btn');
+  const removeEmployeeBtn = document.getElementById('remove-employee-btn');
+  const printBtn = document.getElementById('print-btn');
+  const todayBtn = document.getElementById('today-btn');
+  const langSelect = document.getElementById('lang-select');
+  const holidaySourceSelect = document.getElementById('holiday-source');
+  const holidayCountrySelect = document.getElementById('holiday-country');
+  const darkToggle = document.getElementById('dark-toggle');
+  const darkSheetToggle = document.getElementById('dark-sheet-toggle');
+  const holidayCountryGroup = document.getElementById('holiday-country-group');
+  const tableHead = document.getElementById('table-head');
+  const tableBody = document.getElementById('table-body');
+  const table = document.getElementById('attendance-table');
+
+  // ===== MONTH NAMES =====
+  const MONTH_NAMES = [
+    'STYCZEŃ', 'LUTY', 'MARZEC', 'KWIECIEŃ', 'MAJ', 'CZERWIEC',
+    'LIPIEC', 'SIERPIEŃ', 'WRZESIEŃ', 'PAŹDZIERNIK', 'LISTOPAD', 'GRUDZIEŃ'
+  ];
+
+  const MONTH_NAMES_EN = [
+    'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+    'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+  ];
+
+  // ===== I18N =====
+  const I18N = {
+    pl: {
+      title: '⚙️ Generator Listy',
+      monthYear: 'Miesiąc i rok',
+      monthLabel: 'Nazwa miesiąca (opcjonalnie)',
+      monthPlaceholder: 'np. LIPIEC 2026',
+      editMode: 'Tryb edycji',
+      employees: 'Pracownicy',
+      add: 'Dodaj',
+      remove: 'Usuń',
+      language: 'Język / Language',
+      devSettings: '⚙️ Ustawienia',
+      holidaySource: 'Źródło świąt',
+      holidayCountry: 'Kraj (API)',
+      darkMode: 'Dark mode',
+      darkSheet: 'Dark Sheet',
+      print: 'Drukuj / Zapisz PDF',
+      day: 'Dzień',
+      status: 'Stan',
+      hours: 'Godziny',
+      attendanceList: 'LISTA OBECNOŚCI',
+      newEmployee: 'Nowy pracownik',
+      specialDayTooltip: 'Dzień wolny/świąteczny',
+    },
+    en: {
+      title: '⚙️ Attendance Generator',
+      monthYear: 'Month and year',
+      monthLabel: 'Month label (optional)',
+      monthPlaceholder: 'e.g. JULY 2026',
+      editMode: 'Edit mode',
+      employees: 'Employees',
+      add: 'Add',
+      remove: 'Remove',
+      language: 'Language',
+      devSettings: '⚙️ Settings',
+      holidaySource: 'Holiday source',
+      holidayCountry: 'Country (API)',
+      darkMode: 'Dark mode',
+      darkSheet: 'Dark Sheet',
+      print: 'Print / Save PDF',
+      day: 'Day',
+      status: 'Status',
+      hours: 'Hours',
+      attendanceList: 'ATTENDANCE LIST',
+      newEmployee: 'New employee',
+      specialDayTooltip: 'Day off / holiday',
+    },
+  };
+
+  function applyLanguage(lang) {
+    const t = I18N[lang] || I18N.pl;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (t[key] !== undefined) {
+        el.textContent = t[key];
+      }
+    });
+    // Update title
+    document.querySelector('#ui-panel h1').textContent = t.title;
+    // Update month label placeholder
+    monthLabelInput.placeholder = t.monthPlaceholder;
+    // Re-render to update table headers
+    render();
+  }
+
+  // ===== INIT MONTH SELECT =====
+  function initMonthSelect() {
+    const names = state.lang === 'en' ? MONTH_NAMES_EN : MONTH_NAMES;
+    monthSelect.innerHTML = '';
+    names.forEach((name, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = name;
+      monthSelect.appendChild(opt);
+    });
+    monthSelect.value = state.month;
+  }
+
+  // ===== HELPERS =====
+  function daysInMonth(m, y) { return new Date(y, m + 1, 0).getDate(); }
+
+  let holidaysPromise = null;
+
+  function computeHolidays() {
+    if (state.holidaySource === 'local') {
+      state.holidays = computePolishHolidaysLocally(state.year);
+      return;
+    }
+    holidaysPromise = fetchHolidaysFromAPI(state.year, state.holidayCountry);
+    holidaysPromise.then(holidays => {
+      state.holidays = holidays;
+      render();
+    });
+  }
+
+  function dateKey(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  function isWeekend(y, m, d) {
+    const dow = new Date(y, m, d).getDay();
+    return dow === 0 || dow === 6;
+  }
+
+  // ===== POLISH HOLIDAYS (fetched from Nager.Date API) =====
+  const HOLIDAY_API = 'https://date.nager.at/api/v3/PublicHolidays';
+
+  async function fetchHolidaysFromAPI(year, countryCode) {
+    try {
+      const res = await fetch(`${HOLIDAY_API}/${year}/${countryCode}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const holidays = new Set();
+      data.forEach(item => {
+        holidays.add(item.date);
+      });
+      return holidays;
+    } catch (err) {
+      console.warn('API fetch failed, falling back to local Polish holidays:', err.message);
+      return computePolishHolidaysLocally(year);
+    }
+  }
+
+  // Local fallback — hardcoded Polish holidays
+  function computePolishHolidaysLocally(year) {
+    const holidays = new Set();
+
+    const fixed = [
+      [1, 1],   // Nowy Rok
+      [1, 6],   // Trzech Króli
+      [5, 1],   // Święto Pracy
+      [5, 3],   // Konstytucja 3 Maja
+      [8, 15],  // Wniebowzięcie NMP
+      [11, 11], // Dzień Niepodległości
+      [12, 25], // Boże Narodzenie (pierwszy dzień)
+      [12, 26], // Boże Narodzenie (drugi dzień)
+    ];
+    fixed.forEach(([m, d]) => holidays.add(dateKey(year, m - 1, d)));
+
+    // Movable holidays — Gauss algorithm
+    const easter = computeEaster(year);
+    const easterDate = new Date(year, 2, easter);
+
+    const easterMon = new Date(easterDate);
+    easterMon.setDate(easterMon.getDate() + 1);
+    holidays.add(dateKey(easterMon.getFullYear(), easterMon.getMonth(), easterMon.getDate()));
+
+    const corpusChristi = new Date(easterDate);
+    corpusChristi.setDate(corpusChristi.getDate() + 60);
+    holidays.add(dateKey(corpusChristi.getFullYear(), corpusChristi.getMonth(), corpusChristi.getDate()));
+
+    return holidays;
+  }
+
+  function computeEaster(year) {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return month === 3 ? day : day + 31;
+  }
+
+  function isSpecialDay(y, m, d) {
+    const key = dateKey(y, m, d);
+    // Manual overrides take precedence
+    if (state.normalDays.has(key)) return false;
+    if (state.specialDays.has(key)) return true;
+    // Default: holidays and weekends are special
+    return state.holidays.has(key) || isWeekend(y, m, d);
+  }
+
+  function generateMonthLabel() {
+    const t = I18N[state.lang] || I18N.pl;
+    const names = state.lang === 'en' ? MONTH_NAMES_EN : MONTH_NAMES;
+    return `${t.attendanceList} - ${names[state.month]} ${state.year}`;
+  }
+
+  // ===== RENDER TABLE =====
+  function render() {
+    const m = state.month;
+    const y = state.year;
+    const days = daysInMonth(m, y);
+    const employees = state.employees;
+    const label = state.monthLabel.trim() || generateMonthLabel();
+    const t = I18N[state.lang] || I18N.pl;
+
+    // Update month label input if empty
+    if (!state.monthLabel.trim()) {
+      monthLabelInput.value = label;
+    }
+
+    // Build header
+    let headerHTML = '<tr>';
+
+    // Main header row - spans all columns
+    const totalCols = 1 + employees.length * 2;
+    headerHTML += `<th class="main-header" colspan="${totalCols}">${label}</th>`;
+    headerHTML += '</tr>';
+
+    // Second row: "Dzień" + employee names (colspan=2)
+    headerHTML += '<tr>';
+    headerHTML += `<th class="corner-cell">${t.day}</th>`;
+    employees.forEach((emp, idx) => {
+      const empId = `emp-${idx}`;
+      headerHTML += `<th class="employee-name" colspan="2" data-empidx="${idx}" contenteditable="${state.editMode}">${emp}</th>`;
+    });
+    headerHTML += '</tr>';
+
+    // Third row: sub-headers
+    headerHTML += '<tr>';
+    headerHTML += '<th class="corner-cell"></th>';
+    employees.forEach(() => {
+      headerHTML += `<th class="sub-header">${t.status}</th>`;
+      headerHTML += `<th class="sub-header">${t.hours}</th>`;
+    });
+    headerHTML += '</tr>';
+
+    tableHead.innerHTML = headerHTML;
+
+    // Build body
+    let bodyHTML = '';
+    for (let d = 1; d <= days; d++) {
+      const special = isSpecialDay(y, m, d);
+      const rowClass = special ? 'special-day' : '';
+      const key = dateKey(y, m, d);
+      const isChecked = state.specialDays.has(key) || (special && !state.normalDays.has(key));
+      bodyHTML += `<tr class="${rowClass}" data-day="${d}">`;
+      bodyHTML += `<td data-day="${d}">`;
+      bodyHTML += `<span contenteditable="${state.editMode}">${d}</span>`;
+      if (state.editMode) {
+        bodyHTML += `<label style="display:inline-flex;align-items:center;margin-left:4px;cursor:pointer;" title="${t.specialDayTooltip}">`;
+        bodyHTML += `<input type="checkbox" class="day-special-toggle" data-day="${d}" ${isChecked ? 'checked' : ''}>`;
+        bodyHTML += '</label>';
+      }
+      bodyHTML += '</td>';
+      employees.forEach((emp, idx) => {
+        bodyHTML += `<td class="cell-status" contenteditable="${state.editMode}"></td>`;
+        bodyHTML += `<td class="cell-hours" contenteditable="${state.editMode}"></td>`;
+      });
+      bodyHTML += '</tr>';
+    }
+
+    tableBody.innerHTML = bodyHTML;
+
+    // Toggle edit mode class on table
+    table.classList.toggle('edit-mode', state.editMode);
+
+    // Bind special day checkboxes
+    if (state.editMode) {
+      bindDayToggles();
+    }
+
+    updateEmployeeListUI();
+    updateRemoveButton();
+  }
+
+  // ===== BIND DAY TOGGLES =====
+  function bindDayToggles() {
+    const checkboxes = tableBody.querySelectorAll('.day-special-toggle');
+    checkboxes.forEach(cb => {
+      cb.removeEventListener('change', onDayCheckboxChange);
+      cb.addEventListener('change', onDayCheckboxChange);
+    });
+  }
+
+  function onDayCheckboxChange(e) {
+    if (!state.editMode) return;
+    const cb = e.currentTarget;
+    const day = parseInt(cb.dataset.day, 10);
+    const key = dateKey(state.year, state.month, day);
+    const tr = cb.closest('tr');
+
+    if (cb.checked) {
+      // Mark as special (day off)
+      state.normalDays.delete(key);
+      state.specialDays.add(key);
+    } else {
+      // Mark as normal (working day)
+      state.specialDays.delete(key);
+      state.normalDays.add(key);
+    }
+
+    tr.classList.toggle('special-day', cb.checked);
+  }
+
+  // ===== EMPLOYEE LIST UI =====
+  function updateEmployeeListUI() {
+    employeeList.innerHTML = '';
+    state.employees.forEach((name, idx) => {
+      const div = document.createElement('div');
+      div.className = 'employee-item';
+      div.innerHTML = `
+        <span class="emp-name">${name}</span>
+        <button class="emp-remove" data-idx="${idx}" title="Usuń">✕</button>
+      `;
+      div.querySelector('.emp-remove').addEventListener('click', () => {
+        removeEmployee(idx);
+      });
+      employeeList.appendChild(div);
+    });
+  }
+
+  function updateRemoveButton() {
+    removeEmployeeBtn.disabled = state.employees.length <= 1;
+  }
+
+  // ===== EMPLOYEE MANAGEMENT =====
+  function addEmployee() {
+    const t = I18N[state.lang] || I18N.pl;
+    const baseName = `${t.newEmployee} ${state.employees.length + 1}`;
+    state.employees.push(baseName);
+    render();
+  }
+
+  function removeEmployee(idx) {
+    if (state.employees.length <= 1) return;
+    state.employees.splice(idx, 1);
+    render();
+  }
+
+  // ===== UI EVENTS =====
+  function onMonthChange() {
+    state.month = parseInt(monthSelect.value, 10);
+    // Clear manual month label so it auto-generates
+    state.monthLabel = '';
+    monthLabelInput.value = '';
+    computeHolidays();
+    render();
+  }
+
+  function renderYearPicker() {
+    const y = state.year;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const startYear = y - 1;
+    const endYear = y + 3;
+    yearPopup.innerHTML = '';
+
+    for (let yr = startYear; yr <= endYear; yr++) {
+      const tile = document.createElement('button');
+      tile.className = 'year-tile' + (yr === y ? ' selected' : '');
+      tile.textContent = yr;
+      tile.dataset.year = yr;
+      tile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectYear(yr);
+      });
+      yearPopup.appendChild(tile);
+    }
+
+    // Separator + current year tile
+    const sep = document.createElement('hr');
+    sep.style.cssText = 'grid-column:1/-1;margin:0.25rem 0;border:none;border-top:1px solid var(--border-light);';
+    yearPopup.appendChild(sep);
+
+    const currentTile = document.createElement('button');
+    currentTile.className = 'year-tile' + (currentYear === y ? ' selected' : '');
+    currentTile.textContent = '📍 ' + currentYear;
+    currentTile.dataset.year = currentYear;
+    currentTile.style.gridColumn = '1 / -1';
+    currentTile.title = 'Obecny rok / Current year';
+    currentTile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectYear(currentYear);
+    });
+    yearPopup.appendChild(currentTile);
+  }
+
+  function selectYear(y) {
+    state.year = y;
+    yearBtn.textContent = y;
+    yearPopup.classList.remove('open');
+    state.monthLabel = '';
+    monthLabelInput.value = '';
+    computeHolidays();
+    render();
+  }
+
+  function onMonthLabelChange() {
+    state.monthLabel = monthLabelInput.value.trim();
+    render();
+  }
+
+  function onEditToggle() {
+    state.editMode = editToggle.checked;
+    editBadge.classList.toggle('active', state.editMode);
+    editControls.style.display = state.editMode ? 'block' : 'none';
+    render();
+  }
+
+  // ===== PRINT =====
+  function onPrint() {
+    window.print();
+  }
+
+  // ===== SYNC EMPLOYEE NAMES FROM TABLE =====
+  function syncEmployeeNamesFromTable() {
+    if (!state.editMode) return;
+    const nameHeaders = tableHead.querySelectorAll('.employee-name');
+    nameHeaders.forEach((th, idx) => {
+      if (idx < state.employees.length) {
+        state.employees[idx] = th.textContent.trim() || state.employees[idx];
+      }
+    });
+    updateEmployeeListUI();
+  }
+
+  // ===== WATCH FOR CONTENTEDITABLE CHANGES =====
+  let editObserver = null;
+
+  function startEditObserver() {
+    stopEditObserver();
+    editObserver = new MutationObserver(() => {
+      syncEmployeeNamesFromTable();
+    });
+    editObserver.observe(tableHead, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  }
+
+  function stopEditObserver() {
+    if (editObserver) {
+      editObserver.disconnect();
+      editObserver = null;
+    }
+  }
+
+  // ===== THEME =====
+  function applyTheme() {
+    const root = document.documentElement;
+    root.classList.toggle('dark-mode', state.darkMode);
+    if (state.darkMode) {
+      root.classList.toggle('dark-sheet', state.darkSheet);
+    } else {
+      root.classList.remove('dark-sheet');
+    }
+  }
+
+  // ===== INIT =====
+  function init() {
+    initMonthSelect();
+    yearBtn.textContent = state.year;
+    monthLabelInput.value = '';
+    langSelect.value = state.lang;
+    holidaySourceSelect.value = state.holidaySource;
+    holidayCountrySelect.value = state.holidayCountry;
+    holidayCountryGroup.style.display = state.holidaySource === 'api' ? 'block' : 'none';
+
+    // Events
+    monthSelect.addEventListener('change', onMonthChange);
+
+    yearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      renderYearPicker();
+      yearPopup.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!yearPicker.contains(e.target)) {
+        yearPopup.classList.remove('open');
+      }
+    });
+    monthLabelInput.addEventListener('input', () => {
+      clearTimeout(monthLabelInput._timer);
+      monthLabelInput._timer = setTimeout(onMonthLabelChange, 300);
+    });
+    editToggle.addEventListener('change', onEditToggle);
+    addEmployeeBtn.addEventListener('click', addEmployee);
+    removeEmployeeBtn.addEventListener('click', () => {
+      if (state.employees.length > 0) removeEmployee(state.employees.length - 1);
+    });
+    printBtn.addEventListener('click', onPrint);
+
+    todayBtn.addEventListener('click', () => {
+      const now = new Date();
+      state.month = now.getMonth();
+      state.year = now.getFullYear();
+      state.monthLabel = '';
+      monthLabelInput.value = '';
+      monthSelect.value = state.month;
+      yearBtn.textContent = state.year;
+      computeHolidays();
+      render();
+    });
+
+    // Language
+    langSelect.addEventListener('change', () => {
+      state.lang = langSelect.value;
+      initMonthSelect();
+      applyLanguage(state.lang);
+    });
+
+    // Holiday source
+    holidaySourceSelect.addEventListener('change', () => {
+      state.holidaySource = holidaySourceSelect.value;
+      holidayCountryGroup.style.display = state.holidaySource === 'api' ? 'block' : 'none';
+      computeHolidays();
+      render();
+    });
+
+    holidayCountrySelect.addEventListener('change', () => {
+      state.holidayCountry = holidayCountrySelect.value;
+      computeHolidays();
+      render();
+    });
+
+    // Listen for contenteditable sync
+    document.addEventListener('selectionchange', () => {
+      if (state.editMode) {
+        syncEmployeeNamesFromTable();
+      }
+    });
+
+    // Dark mode
+    darkToggle.addEventListener('change', () => {
+      state.darkMode = darkToggle.checked;
+      // Auto-enable dark sheet with dark mode
+      if (state.darkMode) {
+        state.darkSheet = true;
+        darkSheetToggle.checked = true;
+        localStorage.setItem('tsl-dark-sheet', '1');
+      }
+      applyTheme();
+      // Save preference
+      localStorage.setItem('tsl-dark-mode', state.darkMode ? '1' : '');
+    });
+
+    // Dark sheet
+    darkSheetToggle.addEventListener('change', () => {
+      state.darkSheet = darkSheetToggle.checked;
+      applyTheme();
+      localStorage.setItem('tsl-dark-sheet', state.darkSheet ? '1' : '');
+    });
+
+    // Restore saved preferences
+    if (localStorage.getItem('tsl-dark-mode') === '1') {
+      state.darkMode = true;
+      darkToggle.checked = true;
+      // Auto-enable dark sheet with dark mode
+      state.darkSheet = true;
+      darkSheetToggle.checked = true;
+      localStorage.setItem('tsl-dark-sheet', '1');
+    } else if (localStorage.getItem('tsl-dark-sheet') === '1') {
+      state.darkSheet = true;
+      darkSheetToggle.checked = true;
+    }
+
+    computeHolidays();
+    applyLanguage(state.lang);
+    applyTheme();
+    render();
+
+    // If edit mode is on at start
+    if (state.editMode) {
+      startEditObserver();
+    }
+
+    // Override edit toggle to also manage observer
+    onEditToggle = function() {
+      state.editMode = editToggle.checked;
+      editBadge.classList.toggle('active', state.editMode);
+      editControls.style.display = state.editMode ? 'block' : 'none';
+      if (state.editMode) {
+        startEditObserver();
+      } else {
+        stopEditObserver();
+        syncEmployeeNamesFromTable();
+      }
+      render();
+    };
+    editToggle.removeEventListener('change', onEditToggle);
+    editToggle.addEventListener('change', onEditToggle);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
