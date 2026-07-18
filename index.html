@@ -585,7 +585,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
           <button class="year-btn" id="year-btn">2026</button>
           <div class="year-popup" id="year-popup"></div>
         </div>
-        <button class="btn btn-secondary" id="today-btn" title="Obecny miesiąc / Current month" style="padding:0.5rem 0.7rem;font-size:0.9rem;">📅</button>
+        <button class="btn btn-secondary" id="today-btn" title="Obecny miesiąc / Current month" style="padding:0.5rem 0.7rem;font-size:0.9rem;margin-right:0.2rem;">📅</button>
       </div>
     </div>
 
@@ -704,8 +704,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
 
   // ===== STATE =====
   const state = {
-    month: 7,          // 0-based
-    year: 2026,
+    month: new Date().getMonth(),          // 0-based
+    year: new Date().getFullYear(),
     monthLabel: '',
     employees: ['Jan Kowalski', 'Anna Nowak', 'Piotr Wiśniewski'],
     editMode: false,
