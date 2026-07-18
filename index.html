@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generator Listy Obecności</title>
+<title>TimeSheetLite — Attendance Sheet Generator</title>
 <style>
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -144,7 +144,7 @@ body {
 
 /* ===== UI PANEL ===== */
 #ui-panel {
-  flex: 0 0 360px;
+  flex: 0 0 clamp(280px, 26vw, 440px);
   background: var(--bg-panel);
   border-radius: 12px;
   box-shadow: var(--shadow-panel);
@@ -187,11 +187,14 @@ body {
   gap: 0.5rem;
   align-items: center;
   padding-right: 0.25rem;
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
 }
 
 .control-row select,
 .control-row input[type="number"] {
-  flex: 1;
+  flex: 1 1 80px;
+  min-width: 0;
   padding: 0.5rem 0.6rem;
   border: 1.5px solid var(--border-default);
   border-radius: 8px;
@@ -214,7 +217,7 @@ body {
 /* Year picker */
 .year-picker {
   position: relative;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
 }
 
 .year-btn {
@@ -576,24 +579,24 @@ tbody td.cell-hours { min-width: 3.5rem; }
 <div id="app">
   <!-- UI Panel -->
   <aside id="ui-panel">
-    <h1>⚙️ Generator Listy</h1>
+    <h1>⚙️ Attendance Generator</h1>
 
     <div class="control-group">
-      <label data-i18n="monthYear">Miesiąc i rok</label>
+      <label data-i18n="monthYear">Month and year</label>
       <div class="control-row">
         <select id="month-select"></select>
         <div class="year-picker" id="year-picker">
           <button class="year-btn" id="year-btn">2026</button>
           <div class="year-popup" id="year-popup"></div>
         </div>
-        <button class="btn btn-secondary" id="today-btn" data-i18n="today" title="Obecny miesiąc / Current month" style="padding:0.5rem 0.7rem;font-size:0.9rem;">📅</button>
+        <button class="btn btn-secondary" id="today-btn" data-i18n="today" title="Current month" style="padding:0.5rem 0.7rem;font-size:0.9rem;">📅</button>
       </div>
     </div>
 
     <div class="control-group">
-      <label data-i18n="monthLabel">Nazwa miesiąca (opcjonalnie)</label>
+      <label data-i18n="monthLabel">Month label (optional)</label>
       <div class="control-row">
-        <input type="text" id="month-label" placeholder="np. LIPIEC 2026" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+        <input type="text" id="month-label" placeholder="e.g. JULY 2026" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
       </div>
     </div>
 
@@ -602,7 +605,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
 	        <input type="checkbox" id="edit-toggle">
 	        <span class="slider"></span>
 	      </label>
-	        <span class="toggle-label" data-i18n="editMode">Tryb edycji</span>
+	        <span class="toggle-label" data-i18n="editMode">Edit mode</span>
 	    </div>
 
 	    <div class="toggle-row">
@@ -610,17 +613,17 @@ tbody td.cell-hours { min-width: 3.5rem; }
 	        <input type="checkbox" id="dark-toggle">
 	        <span class="slider"></span>
 	      </label>
-	              <span class="toggle-label" data-i18n="darkMode">Tryb ciemny</span>
+	        <span class="toggle-label" data-i18n="darkMode">Dark mode</span>
 	    </div>
 
     <div class="edit-controls" id="edit-controls" style="display:none;">
       <div class="control-group">
-        <label data-i18n="employees">Osoby</label>
+        <label data-i18n="employees">Employees</label>
         <div class="employee-list" id="employee-list"></div>
       </div>
       <div class="btn-group">
-        <button class="btn btn-primary" id="add-employee-btn">➕ <span data-i18n="add">Dodaj</span></button>
-        <button class="btn btn-danger" id="remove-employee-btn" disabled>✕ <span data-i18n="remove">Usuń</span></button>
+        <button class="btn btn-primary" id="add-employee-btn">➕ <span data-i18n="add">Add</span></button>
+        <button class="btn btn-danger" id="remove-employee-btn" disabled>✕ <span data-i18n="remove">Remove</span></button>
       </div>
     </div>
 
@@ -637,7 +640,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
 
     <!-- Dev settings (collapsible) -->
     <details id="dev-settings" style="border-top:2px solid var(--border-light);padding-top:0.75rem;">
-      <summary style="cursor:pointer;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-summary);user-select:none;" data-i18n="devSettings">⚙️ Ustawienia</summary>
+      <summary style="cursor:pointer;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-summary);user-select:none;" data-i18n="devSettings">⚙️ Settings</summary>
       <div class="dev-settings">
         <div class="control-group">
           <label>
@@ -651,7 +654,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
           </label>
         </div>
         <div class="control-group">
-          <label data-i18n="holidaySource">Źródło świąt</label>
+          <label data-i18n="holidaySource">Holiday source</label>
           <div class="control-row">
             <select id="holiday-source" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
               <option value="local">🇵🇱 Polska (lokalnie)</option>
@@ -660,7 +663,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
           </div>
         </div>
         <div class="control-group" id="holiday-country-group" style="display:none;">
-          <label data-i18n="holidayCountry">Kraj (API)</label>
+          <label data-i18n="holidayCountry">Country (API)</label>
           <div class="control-row">
             <select id="holiday-country" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
               <option value="PL">🇵🇱 Polska</option>
@@ -691,7 +694,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
     </details>
 
     <div style="margin-top:auto;padding-top:0.5rem;border-top:2px solid var(--border-light);">
-      <button class="btn btn-print" id="print-btn">🖨️ <span data-i18n="print">Drukuj / Zapisz PDF</span></button>
+      <button class="btn btn-print" id="print-btn">🖨️ <span data-i18n="print">Print / Save PDF</span></button>
     </div>
   </aside>
 
@@ -719,18 +722,18 @@ tbody td.cell-hours { min-width: 3.5rem; }
     month: new Date().getMonth(),          // 0-based
     year: new Date().getFullYear(),
     monthLabel: '',
-    employees: ['Jan Kowalski', 'Anna Nowak', 'Piotr Wiśniewski'],
-    editMode: false,
-    darkMode: false,
-    darkSheet: false,
+    employees: ['John Smith', 'Anna Johnson', 'Peter Williams'],
     specialDays: new Set(), // "YYYY-MM-DD" manually marked special
     normalDays: new Set(),  // "YYYY-MM-DD" manually marked normal (overrides holidays/weekends)
     data: {},         // "YYYY-MM-DD:empIdx" -> { status: '...', hours: '...' }
     dayLabels: {},    // "YYYY-MM-DD" -> edited day label
     holidays: new Set(),   // computed holidays
-    lang: 'pl',
+    lang: 'en',
     holidaySource: 'local',
     holidayCountry: 'PL',
+    editMode: false,
+    darkMode: false,
+    darkSheet: false,
   };
 
   // ===== DOM REFS =====
