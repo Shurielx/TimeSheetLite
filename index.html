@@ -78,6 +78,23 @@ html.dark-mode.dark-sheet {
   --border-table: #555;
 }
 
+html.dark-mode:not(.dark-sheet) {
+  --bg-sheet: #ffffff;
+  --bg-sheet-page: #fff;
+  --bg-special: #eaeaea;
+  --bg-hover-td: #f0f0f0;
+  --border-table: #000;
+  --text-sheet: #1e1e2e;
+}
+
+html.dark-mode:not(.dark-sheet) #sheet-container,
+html.dark-mode:not(.dark-sheet) #sheet-container table,
+html.dark-mode:not(.dark-sheet) #sheet-container th,
+html.dark-mode:not(.dark-sheet) #sheet-container td,
+html.dark-mode:not(.dark-sheet) #sheet-container .main-header {
+  color: #1e1e2e;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
