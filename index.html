@@ -144,7 +144,7 @@ body {
 
 /* ===== UI PANEL ===== */
 #ui-panel {
-  flex: 0 0 320px;
+  flex: 0 0 360px;
   background: var(--bg-panel);
   border-radius: 12px;
   box-shadow: var(--shadow-panel);
@@ -156,6 +156,7 @@ body {
   gap: 1.25rem;
   max-height: calc(100vh - 3rem);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 #ui-panel h1 {
@@ -341,15 +342,7 @@ body {
   font-weight: 500;
 }
 
-.edit-badge {
-  font-size: 0.7rem;
-  color: #3b82f6;
-  font-weight: 600;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
 
-.edit-badge.active { opacity: 1; }
 
 /* Buttons */
 .btn-group {
@@ -404,7 +397,7 @@ html.dark-mode .btn-print:hover {
 }
 
 /* Employee list in edit mode */
-.employee-list { display: flex; flex-direction: column; gap: 0.35rem; }
+.employee-list { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.5rem; }
 
 .employee-item {
   display: flex;
@@ -608,8 +601,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
 	        <input type="checkbox" id="edit-toggle">
 	        <span class="slider"></span>
 	      </label>
-	      <span class="toggle-label" data-i18n="editMode">Tryb edycji</span>
-	      <span class="edit-badge" id="edit-badge">EDYTUJ</span>
+	        <span class="toggle-label" data-i18n="editMode">Tryb edycji</span>
 	    </div>
 
 	    <div class="toggle-row">
@@ -622,7 +614,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
 
     <div class="edit-controls" id="edit-controls" style="display:none;">
       <div class="control-group">
-        <label data-i18n="employees">Pracownicy</label>
+        <label data-i18n="employees">Osoby</label>
         <div class="employee-list" id="employee-list"></div>
       </div>
       <div class="btn-group">
@@ -653,7 +645,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
                 <input type="checkbox" id="dark-sheet-toggle">
                 <span class="slider"></span>
               </label>
-              <span class="toggle-label" data-i18n="darkSheet" style="font-size:0.85rem;text-transform:none;letter-spacing:0;font-weight:500;">Dark Sheet</span>
+              <span class="toggle-label" data-i18n="darkSheet" style="font-size:0.85rem;text-transform:none;letter-spacing:0;font-weight:500;">Ciemny arkusz</span>
             </div>
           </label>
         </div>
@@ -721,6 +713,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
     darkSheet: false,
     specialDays: new Set(), // "YYYY-MM-DD" manually marked special
     normalDays: new Set(),  // "YYYY-MM-DD" manually marked normal (overrides holidays/weekends)
+    data: {},         // "YYYY-MM-DD:empIdx" -> { status: '...', hours: '...' }
+    dayLabels: {},    // "YYYY-MM-DD" -> edited day label
     holidays: new Set(),   // computed holidays
     lang: 'pl',
     holidaySource: 'local',
@@ -734,7 +728,6 @@ tbody td.cell-hours { min-width: 3.5rem; }
   const yearPopup = document.getElementById('year-popup');
   const monthLabelInput = document.getElementById('month-label');
   const editToggle = document.getElementById('edit-toggle');
-  const editBadge = document.getElementById('edit-badge');
   const editControls = document.getElementById('edit-controls');
   const employeeList = document.getElementById('employee-list');
   const addEmployeeBtn = document.getElementById('add-employee-btn');
@@ -770,7 +763,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
       monthLabel: 'Nazwa miesiąca (opcjonalnie)',
       monthPlaceholder: 'np. LIPIEC 2026',
       editMode: 'Tryb edycji',
-      employees: 'Pracownicy',
+      employees: 'Osoby',
       add: 'Dodaj',
       remove: 'Usuń',
       language: 'Język / Language',
@@ -778,7 +771,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
       holidaySource: 'Źródło świąt',
       holidayCountry: 'Kraj (API)',
       darkMode: 'Dark mode',
-      darkSheet: 'Dark Sheet',
+      darkSheet: 'Ciemny arkusz',
       print: 'Drukuj / Zapisz PDF',
       day: 'Dzień',
       status: 'Stan',
@@ -786,6 +779,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
       attendanceList: 'LISTA OBECNOŚCI',
       newEmployee: 'Nowy pracownik',
       specialDayTooltip: 'Dzień wolny/świąteczny',
+      save: 'Zapisz',
     },
     en: {
       title: '⚙️ Attendance Generator',
@@ -809,6 +803,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
       attendanceList: 'ATTENDANCE LIST',
       newEmployee: 'New employee',
       specialDayTooltip: 'Day off / holiday',
+      save: 'Save',
     },
   };
 
@@ -1001,7 +996,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
       const isChecked = state.specialDays.has(key) || (special && !state.normalDays.has(key));
       bodyHTML += `<tr class="${rowClass}" data-day="${d}">`;
       bodyHTML += `<td data-day="${d}">`;
-      bodyHTML += `<span contenteditable="${state.editMode}">${d}</span>`;
+      bodyHTML += `<span contenteditable="${state.editMode}">${state.dayLabels[key] || d}</span>`;
       if (state.editMode) {
         bodyHTML += `<label style="display:inline-flex;align-items:center;margin-left:4px;cursor:pointer;" title="${t.specialDayTooltip}">`;
         bodyHTML += `<input type="checkbox" class="day-special-toggle" data-day="${d}" ${isChecked ? 'checked' : ''}>`;
@@ -1009,8 +1004,10 @@ tbody td.cell-hours { min-width: 3.5rem; }
       }
       bodyHTML += '</td>';
       employees.forEach((emp, idx) => {
-        bodyHTML += `<td class="cell-status" contenteditable="${state.editMode}"></td>`;
-        bodyHTML += `<td class="cell-hours" contenteditable="${state.editMode}"></td>`;
+        const dataKey = `${key}:${idx}`;
+        const cellData = state.data[dataKey] || {};
+        bodyHTML += `<td class="cell-status" data-empidx="${idx}" contenteditable="${state.editMode}">${cellData.status || ''}</td>`;
+        bodyHTML += `<td class="cell-hours" data-empidx="${idx}" contenteditable="${state.editMode}">${cellData.hours || ''}</td>`;
       });
       bodyHTML += '</tr>';
     }
@@ -1157,10 +1154,20 @@ tbody td.cell-hours { min-width: 3.5rem; }
   }
 
   function onEditToggle() {
-    state.editMode = editToggle.checked;
-    editBadge.classList.toggle('active', state.editMode);
-    editControls.style.display = state.editMode ? 'block' : 'none';
-    render();
+    if (editToggle.checked) {
+      // Entering edit mode
+      state.editMode = true;
+      editControls.style.display = 'block';
+      render();
+      startEditObserver();
+    } else {
+      // Leaving edit mode -> auto-save
+      saveEditsToState();
+      state.editMode = false;
+      editControls.style.display = 'none';
+      stopEditObserver();
+      render();
+    }
   }
 
   // ===== PRINT =====
@@ -1168,7 +1175,62 @@ tbody td.cell-hours { min-width: 3.5rem; }
     window.print();
   }
 
-  // ===== SYNC EMPLOYEE NAMES FROM TABLE =====
+  function saveEditsToState() {
+    // Save employee names
+    const nameHeaders = tableHead.querySelectorAll('.employee-name');
+    nameHeaders.forEach((th, idx) => {
+      if (idx < state.employees.length) {
+        state.employees[idx] = th.textContent.trim() || state.employees[idx];
+      }
+    });
+
+    // Save day labels, status, hours from table body
+    const rows = tableBody.querySelectorAll('tr');
+    const m = state.month;
+    const y = state.year;
+    rows.forEach(row => {
+      const day = row.dataset.day;
+      if (!day) return;
+      const key = dateKey(y, m, parseInt(day));
+      const firstCell = row.querySelector('td:first-child');
+      if (firstCell) {
+        const labelSpan = firstCell.querySelector('span[contenteditable]');
+        if (labelSpan) {
+          state.dayLabels[key] = labelSpan.textContent.trim();
+        }
+      }
+
+      state.employees.forEach((emp, idx) => {
+        const statusTd = row.querySelector(`.cell-status[data-empidx="${idx}"]`);
+        const hoursTd = row.querySelector(`.cell-hours[data-empidx="${idx}"]`);
+        const dataKey = `${key}:${idx}`;
+        if (!state.data[dataKey]) {
+          state.data[dataKey] = {};
+        }
+        if (statusTd) state.data[dataKey].status = statusTd.textContent.trim();
+        if (hoursTd) state.data[dataKey].hours = hoursTd.textContent.trim();
+      });
+    });
+
+    // Also sync special days from checkboxes
+    const checkboxes = tableBody.querySelectorAll('.day-special-toggle');
+    checkboxes.forEach(cb => {
+      const d = parseInt(cb.dataset.day);
+      const key = dateKey(y, m, d);
+      if (cb.checked) {
+        state.specialDays.add(key);
+        state.normalDays.delete(key);
+      } else {
+        state.specialDays.delete(key);
+      }
+    });
+
+    // Save month label
+    const labelVal = monthLabelInput.value.trim();
+    if (labelVal) {
+      state.monthLabel = labelVal;
+    }
+  }
   function syncEmployeeNamesFromTable() {
     if (!state.editMode) return;
     const nameHeaders = tableHead.querySelectorAll('.employee-name');
@@ -1242,6 +1304,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
       monthLabelInput._timer = setTimeout(onMonthLabelChange, 300);
     });
     editToggle.addEventListener('change', onEditToggle);
+
     addEmployeeBtn.addEventListener('click', addEmployee);
     removeEmployeeBtn.addEventListener('click', () => {
       if (state.employees.length > 0) removeEmployee(state.employees.length - 1);
@@ -1332,18 +1395,22 @@ tbody td.cell-hours { min-width: 3.5rem; }
       startEditObserver();
     }
 
-    // Override edit toggle to also manage observer
+    // Override edit toggle to also manage observer and saving
     onEditToggle = function() {
-      state.editMode = editToggle.checked;
-      editBadge.classList.toggle('active', state.editMode);
-      editControls.style.display = state.editMode ? 'block' : 'none';
-      if (state.editMode) {
+      if (editToggle.checked) {
+        // Entering edit mode
+        state.editMode = true;
+        editControls.style.display = 'block';
+        render();
         startEditObserver();
       } else {
+        // Leaving edit mode -> auto-save
+        saveEditsToState();
+        state.editMode = false;
+        editControls.style.display = 'none';
         stopEditObserver();
-        syncEmployeeNamesFromTable();
+        render();
       }
-      render();
     };
     editToggle.removeEventListener('change', onEditToggle);
     editToggle.addEventListener('change', onEditToggle);
