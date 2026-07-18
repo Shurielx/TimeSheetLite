@@ -36,7 +36,7 @@ Just open `index.html` in any browser. No server required.
 
 ## 📸 Screenshot
 
-![TimeSheetLite preview](https://github.com/user-attachments/assets/b00eccd4-73f2-4e5b-b601-bf68ad2eeb70)
+![TimeSheetLite preview](app.png)
 
 ---
 

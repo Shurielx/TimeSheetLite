@@ -654,28 +654,9 @@ tbody td.cell-hours { min-width: 3.5rem; }
           </label>
         </div>
         <div class="control-group">
-          <label data-i18n="holidaySource">Holiday source</label>
-          <div class="control-row">
-            <select id="holiday-source" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
-              <option value="local">🇵🇱 Polska (lokalnie)</option>
-              <option value="api">🌐 API (Nager.Date)</option>
-            </select>
-          </div>
-        </div>
-        <div class="control-group" id="holiday-country-group" style="display:none;">
-          <label data-i18n="holidayCountry">Country (API)</label>
+          <label data-i18n="holidayCountry">Holidays</label>
           <div class="control-row">
             <select id="holiday-country" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
-              <option value="PL">🇵🇱 Polska</option>
-              <option value="DE">🇩🇪 Niemcy</option>
-              <option value="GB">🇬🇧 Wielka Brytania</option>
-              <option value="US">🇺🇸 USA</option>
-              <option value="FR">🇫🇷 Francja</option>
-              <option value="ES">🇪🇸 Hiszpania</option>
-              <option value="IT">🇮🇹 Włochy</option>
-              <option value="UA">🇺🇦 Ukraina</option>
-              <option value="CZ">🇨🇿 Czechy</option>
-              <option value="SK">🇸🇰 Słowacja</option>
             </select>
           </div>
         </div>
@@ -729,8 +710,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
     dayLabels: {},    // "YYYY-MM-DD" -> edited day label
     holidays: new Set(),   // computed holidays
     lang: 'en',
-    holidaySource: 'local',
-    holidayCountry: 'PL',
+    holidayCountry: 'GB',
     editMode: false,
     darkMode: false,
     darkSheet: false,
@@ -750,11 +730,9 @@ tbody td.cell-hours { min-width: 3.5rem; }
   const printBtn = document.getElementById('print-btn');
   const todayBtn = document.getElementById('today-btn');
   const langSelect = document.getElementById('lang-select');
-  const holidaySourceSelect = document.getElementById('holiday-source');
-  const holidayCountrySelect = document.getElementById('holiday-country');
+  const holidaySelect = document.getElementById('holiday-country');
   const darkToggle = document.getElementById('dark-toggle');
   const darkSheetToggle = document.getElementById('dark-sheet-toggle');
-  const holidayCountryGroup = document.getElementById('holiday-country-group');
   const tableHead = document.getElementById('table-head');
   const tableBody = document.getElementById('table-body');
   const table = document.getElementById('attendance-table');
@@ -783,8 +761,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
       remove: 'Usuń',
       language: 'Język / Language',
       devSettings: '⚙️ Ustawienia',
-      holidaySource: 'Źródło świąt',
-      holidayCountry: 'Kraj (API)',
+      holidaySource: 'Holidays',
+      holidayCountry: 'Holidays',
       darkMode: 'Tryb ciemny',
       darkSheet: 'Ciemny arkusz',
       print: 'Drukuj / Zapisz PDF',
@@ -813,8 +791,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
       remove: 'Remove',
       language: 'Language',
       devSettings: '⚙️ Settings',
-      holidaySource: 'Holiday source',
-      holidayCountry: 'Country (API)',
+      holidaySource: 'Holidays',
+      holidayCountry: 'Holidays',
       darkMode: 'Dark mode',
       darkSheet: 'Dark Sheet',
       backup: 'Backup',
@@ -863,13 +841,39 @@ tbody td.cell-hours { min-width: 3.5rem; }
     monthSelect.value = state.month;
   }
 
+  // ===== HOLIDAY COUNTRY SELECT (i18n) =====
+  const COUNTRIES = {
+    PL: { pl: 'Polska', en: 'Poland' },
+    GB: { pl: 'Wielka Brytania', en: 'United Kingdom' },
+    DE: { pl: 'Niemcy', en: 'Germany' },
+    FR: { pl: 'Francja', en: 'France' },
+    ES: { pl: 'Hiszpania', en: 'Spain' },
+    IT: { pl: 'Włochy', en: 'Italy' },
+    US: { pl: 'USA', en: 'USA' },
+    UA: { pl: 'Ukraina', en: 'Ukraine' },
+    CZ: { pl: 'Czechy', en: 'Czech Republic' },
+    SK: { pl: 'Słowacja', en: 'Slovakia' },
+  };
+
+  function populateHolidaySelect() {
+    const lang = state.lang === 'en' ? 'en' : 'pl';
+    holidaySelect.innerHTML = '';
+    Object.entries(COUNTRIES).forEach(([code, names]) => {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = `${code === 'PL' ? '🇵🇱' : code === 'GB' ? '🇬🇧' : code === 'DE' ? '🇩🇪' : code === 'FR' ? '🇫🇷' : code === 'ES' ? '🇪🇸' : code === 'IT' ? '🇮🇹' : code === 'US' ? '🇺🇸' : code === 'UA' ? '🇺🇦' : code === 'CZ' ? '🇨🇿' : '🇸🇰'} ${names[lang]}`;
+      holidaySelect.appendChild(opt);
+    });
+    holidaySelect.value = state.holidayCountry;
+  }
+
   // ===== HELPERS =====
   function daysInMonth(m, y) { return new Date(y, m + 1, 0).getDate(); }
 
   let holidaysPromise = null;
 
   function computeHolidays() {
-    if (state.holidaySource === 'local') {
+    if (state.holidayCountry === 'PL') {
       state.holidays = computePolishHolidaysLocally(state.year);
       return;
     }
@@ -1325,7 +1329,6 @@ tbody td.cell-hours { min-width: 3.5rem; }
         data: state.data,
         dayLabels: state.dayLabels,
         lang: state.lang,
-        holidaySource: state.holidaySource,
         holidayCountry: state.holidayCountry,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -1350,7 +1353,6 @@ tbody td.cell-hours { min-width: 3.5rem; }
       if (data.data) state.data = data.data;
       if (data.dayLabels) state.dayLabels = data.dayLabels;
       if (data.lang) state.lang = data.lang;
-      if (data.holidaySource) state.holidaySource = data.holidaySource;
       if (data.holidayCountry) state.holidayCountry = data.holidayCountry;
       return true;
     } catch (e) {
@@ -1375,7 +1377,6 @@ tbody td.cell-hours { min-width: 3.5rem; }
         data: state.data,
         dayLabels: state.dayLabels,
         lang: state.lang,
-        holidaySource: state.holidaySource,
         holidayCountry: state.holidayCountry,
       }
     };
@@ -1405,17 +1406,15 @@ tbody td.cell-hours { min-width: 3.5rem; }
         if (s.data) state.data = s.data;
         if (s.dayLabels) state.dayLabels = s.dayLabels;
         if (s.lang) state.lang = s.lang;
-        if (s.holidaySource) state.holidaySource = s.holidaySource;
         if (s.holidayCountry) state.holidayCountry = s.holidayCountry;
         saveState();
         // Re-init UI
         initMonthSelect();
+        populateHolidaySelect();
         yearBtn.textContent = state.year;
         monthLabelInput.value = state.monthLabel;
         langSelect.value = state.lang;
-        holidaySourceSelect.value = state.holidaySource;
-        holidayCountrySelect.value = state.holidayCountry;
-        holidayCountryGroup.style.display = state.holidaySource === 'api' ? 'block' : 'none';
+        holidaySelect.value = state.holidayCountry;
         darkToggle.checked = state.darkMode;
         darkSheetToggle.checked = state.darkSheet;
         computeHolidays();
@@ -1443,12 +1442,11 @@ tbody td.cell-hours { min-width: 3.5rem; }
     loadState();
 
     initMonthSelect();
+    populateHolidaySelect();
     yearBtn.textContent = state.year;
     monthLabelInput.value = state.monthLabel;
     langSelect.value = state.lang;
-    holidaySourceSelect.value = state.holidaySource;
-    holidayCountrySelect.value = state.holidayCountry;
-    holidayCountryGroup.style.display = state.holidaySource === 'api' ? 'block' : 'none';
+    holidaySelect.value = state.holidayCountry;
     darkToggle.checked = state.darkMode;
     darkSheetToggle.checked = state.darkSheet;
 
@@ -1495,21 +1493,14 @@ tbody td.cell-hours { min-width: 3.5rem; }
     langSelect.addEventListener('change', () => {
       state.lang = langSelect.value;
       initMonthSelect();
+      populateHolidaySelect();
       applyLanguage(state.lang);
       saveState();
     });
 
-    // Holiday source
-    holidaySourceSelect.addEventListener('change', () => {
-      state.holidaySource = holidaySourceSelect.value;
-      holidayCountryGroup.style.display = state.holidaySource === 'api' ? 'block' : 'none';
-      computeHolidays();
-      render();
-      saveState();
-    });
-
-    holidayCountrySelect.addEventListener('change', () => {
-      state.holidayCountry = holidayCountrySelect.value;
+    // Holiday country
+    holidaySelect.addEventListener('change', () => {
+      state.holidayCountry = holidaySelect.value;
       computeHolidays();
       render();
       saveState();
