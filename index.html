@@ -570,14 +570,16 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
 }
 
 /* Dynamiczna wysokość wierszy dla idealnego dopasowania do 1 strony */
-/* Dla układu pionowego wiersze mogą być wyższe */
+/* Dla układu pionowego (Portrait) - mniejsze wiersze, by 31 dni weszło na jedną kartkę */
 .sheet-page.portrait table tbody tr td {
-  height: 6.8mm;
+  height: 4.0mm !important;
+  font-size: 10px;
+  padding: 1px 3px;
 }
 
-/* Dla układu poziomego drastycznie zmniejszamy wysokość wierszy, aby 31 dni zmieściło się w 210mm boku */
+/* Dla układu poziomego (Landscape) - mogą być większe, bo szeroka kartka ma więcej miejsca w pionie */
 .sheet-page.landscape table tbody tr td {
-	  height: 4.8mm;
+  height: 4.8mm !important;
   font-size: 11px;
   padding: 2px 4px;
 }
@@ -589,13 +591,13 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
     margin: 8mm !important;
   }
 
-  /* 2. Reset struktury dokumentu */
+  /* 2. Reset struktury dokumentu - zabezpieczenie przed ucinaniem i pustymi kartkami */
   html, body {
-    height: auto !important;
-    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
     background: white !important;
     color: black !important;
   }
@@ -612,8 +614,10 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
     width: 100% !important;
     max-width: none !important;
     height: auto !important;
+    max-height: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
+    border: none !important;
     box-shadow: none !important;
     page-break-before: avoid !important;
     page-break-after: avoid !important;
@@ -639,6 +643,19 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
   #sheet-container th,
   #sheet-container td {
     padding: 3px 4px;
+  }
+
+  /* 5a. Zróżnicowane wysokości wierszy dla portrait i landscape */
+  #sheet-container .sheet-page.portrait table tbody tr td {
+    height: 4.0mm !important;
+    font-size: 10px;
+    padding: 1px 3px;
+  }
+
+  #sheet-container .sheet-page.landscape table tbody tr td {
+    height: 4.8mm !important;
+    font-size: 11px;
+    padding: 2px 4px;
   }
 
   /* 6. Dark mode override na wydruku – zawsze jasny arkusz */
