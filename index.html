@@ -619,40 +619,50 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
 }
 
 @media print {
+  /* Usuwamy marginesy systemowe i wymuszamy orientację poziomą */
   @page {
     size: A4 landscape;
     margin: 8mm !important;
   }
 
-  body {
-    display: block !important;
+  /* Resetujemy całą strukturę dokumentu, by nie trzymała wysokości */
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
     background: transparent !important;
   }
 
-  .sheet-page.landscape {
+  /* Ukrywamy CAŁĄ zawartość strony domyślnie... */
+  body * {
+    display: none !important;
+  }
+
+  /* ...i pokazujemy TYLKO kontener wydruku oraz jego dzieci */
+  #sheet-container,
+  #sheet-container * {
+    display: revert !important;
+  }
+
+  /* Ustawienia dla głównego kontenera tabeli */
+  #sheet-container .sheet-page.landscape {
+    display: block !important;
     width: 100% !important;
     max-width: none !important;
     height: auto !important;
-    box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
+    box-shadow: none !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
     page-break-inside: avoid !important;
   }
 
-  .sheet-page.landscape table {
+  #sheet-container .sheet-page.landscape table {
     width: 100% !important;
     table-layout: auto !important;
-  }
-
-  .sheet-page.portrait {
-    size: A4 portrait;
-    width: 210mm;
-    height: 297mm;
-  }
-  .sheet-page.landscape {
-    size: A4 landscape;
-    width: 297mm;
-    height: 210mm;
   }
 }
 </style>
