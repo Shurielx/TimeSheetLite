@@ -613,7 +613,7 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
 
 /* Dla układu poziomego drastycznie zmniejszamy wysokość wierszy, aby 31 dni zmieściło się w 210mm boku */
 .sheet-page.landscape table tbody tr td {
-  height: 5.2mm;
+	  height: 4.8mm;
   font-size: 11px;
   padding: 2px 4px;
 }
@@ -621,14 +621,11 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
 @media print {
   @page {
     size: A4 landscape;
-    margin: 12mm !important;
+    margin: 8mm !important;
   }
 
   body {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    min-height: 100vh;
+    display: block !important;
     background: transparent !important;
   }
 
@@ -638,12 +635,13 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
     height: auto !important;
     box-shadow: none !important;
     padding: 0 !important;
-    margin: 0 auto !important;
+    margin: 0 !important;
+    page-break-inside: avoid !important;
   }
 
   .sheet-page.landscape table {
     width: 100% !important;
-    table-layout: fixed !important;
+    table-layout: auto !important;
   }
 
   .sheet-page.portrait {
