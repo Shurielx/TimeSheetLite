@@ -588,14 +588,14 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
   /* 1. Orientacja i marginesy */
   @page {
     size: A4 landscape;
-    margin: 8mm !important;
+    margin: 6mm !important;
   }
 
-  /* 2. Reset struktury dokumentu - zabezpieczenie przed ucinaniem i pustymi kartkami */
+  /* 2. Reset struktury dokumentu */
   html, body {
-    height: 100% !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
@@ -610,18 +610,14 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
   /* 4. WYMUSZENIE WIDOCZNOŚCI KONTENERA ARKUSZA */
   #sheet-container {
     display: block !important;
-    position: relative !important;
     width: 100% !important;
     max-width: none !important;
     height: auto !important;
-    max-height: 100% !important;
-    padding: 0 !important;
+    max-height: none !important;
     margin: 0 !important;
-    border: none !important;
+    padding: 0 !important;
     box-shadow: none !important;
-    page-break-before: avoid !important;
-    page-break-after: avoid !important;
-    page-break-inside: avoid !important;
+    border: none !important;
   }
 
   #sheet-container .sheet-page {
@@ -638,6 +634,7 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
     table-layout: auto !important;
     background: white !important;
     font-size: 9pt !important;
+    page-break-inside: avoid !important;
   }
 
   #sheet-container th,
