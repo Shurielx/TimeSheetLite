@@ -56,6 +56,7 @@ Just open `index.html` in any browser. No server required.
 | Holiday source | Local Polish holidays or fetch via API |
 | Column headers | Customize the "Status" and "Hours" sub-column names (Settings → Column headers) |
 | Column width | Adjust the width ratio between the two sub-columns with a slider (Settings → Column width) |
+| Page layout | Switch between Portrait (A4 vertical) and Landscape (A4 horizontal) — table fits exactly on one page in both modes |
 | Backup | Export/Import settings as a JSON file |
 
 ---
