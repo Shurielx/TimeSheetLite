@@ -40,8 +40,6 @@ html { font-size: 16px; }
   --shadow-panel: 0 2px 12px rgba(0,0,0,0.08);
   --shadow-popup: 0 4px 16px rgba(0,0,0,0.12);
   --slider-bg: #c8cdd8;
-  --col-status-pct: 50;
-  --col-hours-pct: 50;
 }
 
 html.dark-mode {
@@ -473,6 +471,7 @@ table {
   border-collapse: collapse;
   font-size: 0.8rem;
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  table-layout: auto;
 }
 
 /* Main header */
@@ -559,6 +558,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
   cursor: text;
 }
 
+
+
 /* Dev settings */
 .dev-settings {
   display: flex;
@@ -641,6 +642,18 @@ tbody td.cell-hours { min-width: 3.5rem; }
         <button class="btn btn-primary" id="add-employee-btn">➕ <span data-i18n="add">Add</span></button>
         <button class="btn btn-danger" id="remove-employee-btn" disabled>✕ <span data-i18n="remove">Remove</span></button>
       </div>
+      <div class="control-group" style="border-top:2px solid var(--border-light);padding-top:0.75rem;margin-top:0.5rem;">
+        <label style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-label);">Column headers</label>
+        <div class="control-row">
+          <input type="text" id="col-status-name" placeholder="Stan" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.85rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+          <input type="text" id="col-hours-name" placeholder="Godziny" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.85rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <div class="control-group" style="border-top:2px solid var(--border-light);padding-top:0.75rem;">
+      <label style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-label);">Column width: <span id="col-width-label">50%</span></label>
+      <input type="range" id="col-width-slider" min="20" max="80" value="50" style="width:100%;accent-color:#3b82f6;">
     </div>
 
     <!-- Language toggle -->
@@ -675,17 +688,6 @@ tbody td.cell-hours { min-width: 3.5rem; }
             <select id="holiday-country" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
             </select>
           </div>
-        </div>
-        <div class="control-group" style="border-top:2px solid var(--border-light);padding-top:0.75rem;margin-top:0.5rem;">
-          <label style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-label);">Column headers</label>
-          <div class="control-row">
-            <input type="text" id="col-status-name" placeholder="Stan" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.85rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
-            <input type="text" id="col-hours-name" placeholder="Godziny" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.85rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
-          </div>
-        </div>
-        <div class="control-group" style="padding-top:0.5rem;">
-          <label style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-label);">Column width: <span id="col-width-label">50%</span></label>
-          <input type="range" id="col-width-slider" min="20" max="80" value="50" style="width:100%;accent-color:#3b82f6;">
         </div>
         <div class="control-group" style="border-top:2px solid var(--border-light);padding-top:0.75rem;margin-top:0.5rem;">
           <label style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-label);" data-i18n="backup">Backup</label>
@@ -1046,11 +1048,9 @@ tbody td.cell-hours { min-width: 3.5rem; }
     headerHTML += '<th class="corner-cell"></th>';
     const statusLabel = state.colStatusName.trim() || t.status;
     const hoursLabel = state.colHoursName.trim() || t.hours;
-    const statusW = state.colWidthPct;
-    const hoursW = 100 - state.colWidthPct;
     employees.forEach(() => {
-      headerHTML += `<th class="sub-header" style="width:${statusW}%">${statusLabel}</th>`;
-      headerHTML += `<th class="sub-header" style="width:${hoursW}%">${hoursLabel}</th>`;
+      headerHTML += `<th class="sub-header cell-status">${statusLabel}</th>`;
+      headerHTML += `<th class="sub-header cell-hours">${hoursLabel}</th>`;
     });
     headerHTML += '</tr>';
 
@@ -1075,18 +1075,16 @@ tbody td.cell-hours { min-width: 3.5rem; }
       employees.forEach((emp, idx) => {
         const dataKey = `${key}:${idx}`;
         const cellData = state.data[dataKey] || {};
-        bodyHTML += `<td class="cell-status" data-empidx="${idx}" contenteditable="${state.editMode}" style="width:${statusW}%">${cellData.status || ''}</td>`;
-        bodyHTML += `<td class="cell-hours" data-empidx="${idx}" contenteditable="${state.editMode}" style="width:${hoursW}%">${cellData.hours || ''}</td>`;
+        bodyHTML += `<td class="cell-status" data-empidx="${idx}" contenteditable="${state.editMode}">${cellData.status || ''}</td>`;
+        bodyHTML += `<td class="cell-hours" data-empidx="${idx}" contenteditable="${state.editMode}">${cellData.hours || ''}</td>`;
       });
       bodyHTML += '</tr>';
     }
 
     tableBody.innerHTML = bodyHTML;
 
-    // Apply column width CSS variables
-    const pct = state.colWidthPct;
-    document.documentElement.style.setProperty('--col-status-pct', pct);
-    document.documentElement.style.setProperty('--col-hours-pct', 100 - pct);
+    // Apply column widths directly on cells
+    applyColumnWidths();
 
     // Toggle edit mode class on table
     table.classList.toggle('edit-mode', state.editMode);
@@ -1098,6 +1096,16 @@ tbody td.cell-hours { min-width: 3.5rem; }
 
     updateEmployeeListUI();
     updateRemoveButton();
+  }
+
+  // ===== COLUMN WIDTH (direct, per-cell style) =====
+  function applyColumnWidths() {
+    const pct = state.colWidthPct;
+    const hoursPct = 100 - pct;
+    document.querySelectorAll('#attendance-table th.cell-status, #attendance-table td.cell-status')
+      .forEach(el => { el.style.width = pct + '%'; });
+    document.querySelectorAll('#attendance-table th.cell-hours, #attendance-table td.cell-hours')
+      .forEach(el => { el.style.width = hoursPct + '%'; });
   }
 
   // ===== BIND DAY TOGGLES =====
@@ -1365,6 +1373,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
         year: state.year,
         monthLabel: state.monthLabel,
         employees: state.employees,
+        editMode: state.editMode,
         darkMode: state.darkMode,
         darkSheet: state.darkSheet,
         specialDays: [...state.specialDays],
@@ -1392,6 +1401,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
       state.year = data.year ?? state.year;
       state.monthLabel = data.monthLabel || '';
       if (data.employees) state.employees = data.employees;
+      state.editMode = !!data.editMode;
       state.darkMode = !!data.darkMode;
       state.darkSheet = !!data.darkSheet;
       if (data.specialDays) state.specialDays = new Set(data.specialDays);
@@ -1419,6 +1429,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
         year: state.year,
         monthLabel: state.monthLabel,
         employees: state.employees,
+        editMode: state.editMode,
         darkMode: state.darkMode,
         darkSheet: state.darkSheet,
         specialDays: [...state.specialDays],
@@ -1451,6 +1462,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
         if (s.year !== undefined) state.year = s.year;
         if (s.monthLabel !== undefined) state.monthLabel = s.monthLabel;
         if (s.employees) state.employees = s.employees;
+        if (s.editMode !== undefined) state.editMode = !!s.editMode;
         if (s.darkMode !== undefined) state.darkMode = !!s.darkMode;
         if (s.darkSheet !== undefined) state.darkSheet = !!s.darkSheet;
         if (s.specialDays) state.specialDays = new Set(s.specialDays);
@@ -1505,7 +1517,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
     darkToggle.checked = state.darkMode;
     darkSheetToggle.checked = state.darkSheet;
 
-    // Column header inputs
+    // Column header inputs (always set, even if hidden)
     colStatusNameInput.value = state.colStatusName;
     colHoursNameInput.value = state.colHoursName;
     colWidthSlider.value = state.colWidthPct;
@@ -1627,11 +1639,13 @@ tbody td.cell-hours { min-width: 3.5rem; }
       saveState();
     });
 
-    // Column width slider
+    // Column width slider — real-time without full re-render
     colWidthSlider.addEventListener('input', () => {
       state.colWidthPct = parseInt(colWidthSlider.value, 10);
       colWidthLabel.textContent = state.colWidthPct + '%';
-      render();
+      applyColumnWidths();
+    });
+    colWidthSlider.addEventListener('change', () => {
       saveState();
     });
 
@@ -1654,8 +1668,12 @@ tbody td.cell-hours { min-width: 3.5rem; }
     render();
 
     // If edit mode is on at start
+    editToggle.checked = state.editMode;
     if (state.editMode) {
+      editControls.style.display = 'block';
       startEditObserver();
+    } else {
+      editControls.style.display = 'none';
     }
 
     // Override edit toggle to also manage observer and saving
