@@ -108,7 +108,7 @@ body {
 }
 
 /* ===== PRINT STYLES ===== */
-@page { size: A4 portrait; margin: 1cm; }
+@page { margin: 1cm; }
 
 @media print {
   body { background: none; }
@@ -132,7 +132,7 @@ body {
     margin: 0 !important;
   }
   table { font-size: 9pt !important; }
-  th, td { padding: 3px 4px !important; }
+  th, td { padding: 3px 4px; }
   html.dark-mode,
   html.dark-mode.dark-sheet {
     --bg-special: #e0e0e0;
@@ -458,8 +458,6 @@ html.dark-mode .btn-print:hover {
 }
 
 #sheet-container .sheet-page {
-  width: 100%;
-  max-width: 210mm;
   background: var(--bg-sheet-page);
   border-radius: 4px;
   overflow: hidden;
@@ -471,7 +469,6 @@ table {
   border-collapse: collapse;
   font-size: 0.8rem;
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
-  table-layout: auto;
 }
 
 /* Main header */
@@ -532,8 +529,7 @@ tbody td:first-child {
 
 tbody td:first-child:hover { background: var(--bg-hover-td); }
 
-tbody td.cell-status { min-width: 3rem; }
-tbody td.cell-hours { min-width: 3.5rem; }
+/* Column widths are set inline via JavaScript in render() */
 
 /* Weekend / special day row */
 .special-day {
@@ -588,6 +584,54 @@ tbody td.cell-hours { min-width: 3.5rem; }
   thead th { padding: 0.25rem 0.2rem; }
   tbody td { padding: 0.2rem 0.2rem; }
   .main-header { font-size: 0.85rem; padding: 0.4rem 0.3rem; }
+}
+
+/* ===== PAGE LAYOUT ===== */
+/* Styl domyślny - pionowy */
+.sheet-page.portrait {
+  width: 210mm;
+  max-width: 210mm;
+  min-height: 297mm;
+  padding: 10mm;
+  box-sizing: border-box;
+}
+
+/* Styl po przełączeniu na poziom - obracamy wymiary na ekranie */
+.sheet-page.landscape {
+  width: 297mm !important;
+  max-width: 297mm !important;
+  min-height: 210mm !important;
+  padding: 8mm !important;
+  box-sizing: border-box;
+}
+
+/* Dynamiczna wysokość wierszy dla idealnego dopasowania do 1 strony */
+/* Dla układu pionowego wiersze mogą być wyższe */
+.sheet-page.portrait table tbody tr td {
+  height: 6.8mm;
+}
+
+/* Dla układu poziomego drastycznie zmniejszamy wysokość wierszy, aby 31 dni zmieściło się w 210mm boku */
+.sheet-page.landscape table tbody tr td {
+  height: 4.2mm;
+  font-size: 11px;
+  padding: 1px 4px;
+}
+
+@media print {
+  @page {
+    margin: 0 !important;
+  }
+  .sheet-page.portrait {
+    size: A4 portrait;
+    width: 210mm;
+    height: 297mm;
+  }
+  .sheet-page.landscape {
+    size: A4 landscape;
+    width: 297mm;
+    height: 210mm;
+  }
 }
 </style>
 </head>
@@ -652,8 +696,25 @@ tbody td.cell-hours { min-width: 3.5rem; }
     </div>
 
     <div class="control-group" style="border-top:2px solid var(--border-light);padding-top:0.75rem;">
-      <label style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-label);">Column width: <span id="col-width-label">50%</span></label>
-      <input type="range" id="col-width-slider" min="20" max="80" value="50" style="width:100%;accent-color:#3b82f6;">
+      <label style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-label);">Column width preset</label>
+      <div class="control-row">
+        <select id="column-width-preset" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+          <option value="preset-90-10">90% / 10%</option>
+          <option value="preset-80-20">80% / 20%</option>
+          <option value="preset-50-50">50% / 50%</option>
+          <option value="preset-20-80">20% / 80%</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="control-group" style="border-top:2px solid var(--border-light);padding-top:0.75rem;">
+      <label style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-label);" data-i18n="pageLayout">Układ strony</label>
+      <div class="control-row">
+        <select id="page-layout" style="flex:1;padding:0.5rem 0.6rem;border:1.5px solid var(--border-default);border-radius:8px;font-size:0.9rem;font-family:inherit;background:var(--bg-input);color:var(--text-primary);outline:none;">
+          <option value="portrait" data-i18n="pageLayoutPortrait">Pionowy (Portrait)</option>
+          <option value="landscape" data-i18n="pageLayoutLandscape">Poziomy (Landscape)</option>
+        </select>
+      </div>
     </div>
 
     <!-- Language toggle -->
@@ -745,7 +806,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
     darkSheet: false,
     colStatusName: '',
     colHoursName: '',
-    colWidthPct: 50,
+    colWidthPreset: 'preset-50-50',
+    pageLayout: 'portrait',
   };
 
   // ===== DOM REFS =====
@@ -767,8 +829,9 @@ tbody td.cell-hours { min-width: 3.5rem; }
   const darkSheetToggle = document.getElementById('dark-sheet-toggle');
   const colStatusNameInput = document.getElementById('col-status-name');
   const colHoursNameInput = document.getElementById('col-hours-name');
-  const colWidthSlider = document.getElementById('col-width-slider');
-  const colWidthLabel = document.getElementById('col-width-label');
+  const columnWidthPreset = document.getElementById('column-width-preset');
+  const pageLayoutSelect = document.getElementById('page-layout');
+  const sheetPage = document.querySelector('.sheet-page');
   const tableHead = document.getElementById('table-head');
   const tableBody = document.getElementById('table-body');
   const table = document.getElementById('attendance-table');
@@ -815,6 +878,9 @@ tbody td.cell-hours { min-width: 3.5rem; }
       resetDefaults: '🔄 Przywróć domyślne',
       today: 'Obecny miesiąc',
       removeTitle: 'Usuń',
+      pageLayout: 'Układ strony',
+      pageLayoutPortrait: 'Pionowy (Portrait)',
+      pageLayoutLandscape: 'Poziomy (Landscape)',
     },
     en: {
       title: '⚙️ Attendance Generator',
@@ -845,6 +911,9 @@ tbody td.cell-hours { min-width: 3.5rem; }
       newEmployee: 'New employee',
       specialDayTooltip: 'Day off / holiday',
       save: 'Save',
+      pageLayout: 'Page Layout',
+      pageLayoutPortrait: 'Portrait',
+      pageLayoutLandscape: 'Landscape',
     },
   };
 
@@ -1026,6 +1095,27 @@ tbody td.cell-hours { min-width: 3.5rem; }
       monthLabelInput.value = label;
     }
 
+    // Calculate inline widths from preset
+    const employeeCount = state.employees.length || 1;
+    let baseStatusPct = 50;
+    let baseHoursPct = 50;
+    if (state.colWidthPreset === 'preset-90-10') {
+      baseStatusPct = 90;
+      baseHoursPct = 10;
+    } else if (state.colWidthPreset === 'preset-80-20') {
+      baseStatusPct = 80;
+      baseHoursPct = 20;
+    } else if (state.colWidthPreset === 'preset-50-50') {
+      baseStatusPct = 50;
+      baseHoursPct = 50;
+    } else if (state.colWidthPreset === 'preset-20-80') {
+      baseStatusPct = 20;
+      baseHoursPct = 80;
+    }
+    // Scale to per-employee portion of the full table width
+    const statusPct = baseStatusPct / employeeCount;
+    const hoursPct = baseHoursPct / employeeCount;
+
     // Build header
     let headerHTML = '<tr>';
 
@@ -1039,7 +1129,7 @@ tbody td.cell-hours { min-width: 3.5rem; }
     headerHTML += `<th class="corner-cell">${t.day}</th>`;
     employees.forEach((emp, idx) => {
       const empId = `emp-${idx}`;
-      headerHTML += `<th class="employee-name" colspan="2" data-empidx="${idx}" contenteditable="${state.editMode}">${emp}</th>`;
+      headerHTML += `<th class="employee-name" colspan="2" style="width:${100 / employeeCount}%" data-empidx="${idx}" contenteditable="${state.editMode}">${emp}</th>`;
     });
     headerHTML += '</tr>';
 
@@ -1049,8 +1139,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
     const statusLabel = state.colStatusName.trim() || t.status;
     const hoursLabel = state.colHoursName.trim() || t.hours;
     employees.forEach(() => {
-      headerHTML += `<th class="sub-header cell-status">${statusLabel}</th>`;
-      headerHTML += `<th class="sub-header cell-hours">${hoursLabel}</th>`;
+      headerHTML += `<th class="sub-header cell-status" style="width:${statusPct}%">${statusLabel}</th>`;
+      headerHTML += `<th class="sub-header cell-hours" style="width:${hoursPct}%">${hoursLabel}</th>`;
     });
     headerHTML += '</tr>';
 
@@ -1075,16 +1165,18 @@ tbody td.cell-hours { min-width: 3.5rem; }
       employees.forEach((emp, idx) => {
         const dataKey = `${key}:${idx}`;
         const cellData = state.data[dataKey] || {};
-        bodyHTML += `<td class="cell-status" data-empidx="${idx}" contenteditable="${state.editMode}">${cellData.status || ''}</td>`;
-        bodyHTML += `<td class="cell-hours" data-empidx="${idx}" contenteditable="${state.editMode}">${cellData.hours || ''}</td>`;
+        bodyHTML += `<td class="cell-status" style="width:${statusPct}%" data-empidx="${idx}" contenteditable="${state.editMode}">${cellData.status || ''}</td>`;
+        bodyHTML += `<td class="cell-hours" style="width:${hoursPct}%" data-empidx="${idx}" contenteditable="${state.editMode}">${cellData.hours || ''}</td>`;
       });
       bodyHTML += '</tr>';
     }
 
     tableBody.innerHTML = bodyHTML;
 
-    // Apply column widths directly on cells
-    applyColumnWidths();
+    // Apply column widths (re-render triggered by change event)
+
+    // Set page layout class on sheet page
+    sheetPage.className = 'sheet-page' + (state.pageLayout === 'landscape' ? ' landscape' : ' portrait');
 
     // Toggle edit mode class on table
     table.classList.toggle('edit-mode', state.editMode);
@@ -1098,14 +1190,9 @@ tbody td.cell-hours { min-width: 3.5rem; }
     updateRemoveButton();
   }
 
-  // ===== COLUMN WIDTH (direct, per-cell style) =====
+  // ===== COLUMN WIDTH (inline styles via re-render) =====
   function applyColumnWidths() {
-    const pct = state.colWidthPct;
-    const hoursPct = 100 - pct;
-    document.querySelectorAll('#attendance-table th.cell-status, #attendance-table td.cell-status')
-      .forEach(el => { el.style.width = pct + '%'; });
-    document.querySelectorAll('#attendance-table th.cell-hours, #attendance-table td.cell-hours')
-      .forEach(el => { el.style.width = hoursPct + '%'; });
+    render();
   }
 
   // ===== BIND DAY TOGGLES =====
@@ -1384,7 +1471,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
         holidayCountry: state.holidayCountry,
         colStatusName: state.colStatusName,
         colHoursName: state.colHoursName,
-        colWidthPct: state.colWidthPct,
+        colWidthPreset: state.colWidthPreset,
+        pageLayout: state.pageLayout,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
@@ -1412,7 +1500,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
       if (data.holidayCountry) state.holidayCountry = data.holidayCountry;
       if (data.colStatusName !== undefined) state.colStatusName = data.colStatusName;
       if (data.colHoursName !== undefined) state.colHoursName = data.colHoursName;
-      if (data.colWidthPct !== undefined) state.colWidthPct = data.colWidthPct;
+      if (data.colWidthPreset !== undefined) state.colWidthPreset = data.colWidthPreset;
+      if (data.pageLayout !== undefined) state.pageLayout = data.pageLayout;
       return true;
     } catch (e) {
       console.warn('Failed to load state:', e);
@@ -1440,7 +1529,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
         holidayCountry: state.holidayCountry,
         colStatusName: state.colStatusName,
         colHoursName: state.colHoursName,
-        colWidthPct: state.colWidthPct,
+        colWidthPreset: state.colWidthPreset,
+        pageLayout: state.pageLayout,
       }
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1473,7 +1563,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
         if (s.holidayCountry) state.holidayCountry = s.holidayCountry;
         if (s.colStatusName !== undefined) state.colStatusName = s.colStatusName;
         if (s.colHoursName !== undefined) state.colHoursName = s.colHoursName;
-        if (s.colWidthPct !== undefined) state.colWidthPct = s.colWidthPct;
+        if (s.colWidthPreset !== undefined) state.colWidthPreset = s.colWidthPreset;
+        if (s.pageLayout !== undefined) state.pageLayout = s.pageLayout;
         saveState();
         // Re-init UI
         initMonthSelect();
@@ -1520,8 +1611,8 @@ tbody td.cell-hours { min-width: 3.5rem; }
     // Column header inputs (always set, even if hidden)
     colStatusNameInput.value = state.colStatusName;
     colHoursNameInput.value = state.colHoursName;
-    colWidthSlider.value = state.colWidthPct;
-    colWidthLabel.textContent = state.colWidthPct + '%';
+    columnWidthPreset.value = state.colWidthPreset || 'preset-50-50';
+    pageLayoutSelect.value = state.pageLayout || 'portrait';
 
     // Events
     monthSelect.addEventListener('change', onMonthChange);
@@ -1639,13 +1730,17 @@ tbody td.cell-hours { min-width: 3.5rem; }
       saveState();
     });
 
-    // Column width slider — real-time without full re-render
-    colWidthSlider.addEventListener('input', () => {
-      state.colWidthPct = parseInt(colWidthSlider.value, 10);
-      colWidthLabel.textContent = state.colWidthPct + '%';
+    // Column width preset
+    columnWidthPreset.addEventListener('change', () => {
+      state.colWidthPreset = columnWidthPreset.value;
       applyColumnWidths();
+      saveState();
     });
-    colWidthSlider.addEventListener('change', () => {
+
+    // Page layout
+    pageLayoutSelect.addEventListener('change', () => {
+      state.pageLayout = pageLayoutSelect.value;
+      render();
       saveState();
     });
 
