@@ -80,7 +80,8 @@ State is auto-saved on every change:
 
 ## 🖨️ Printing & PDF
 
-Click **Print / Save PDF** to generate a clean A4 portrait document.  
+Click **Print / Save PDF** to generate a clean A4 document.  
+Both **Portrait** and **Landscape** layouts are supported — the table is automatically centered, full-width, and fits exactly on one page.
 Custom column headers and width adjustments are fully preserved in the printed output.
 
 ---
