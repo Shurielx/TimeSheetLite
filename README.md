@@ -9,6 +9,8 @@ Generate printable attendance sheets — straight from your browser, no installa
 - **Special days** – weekends and holidays auto-marked, with manual toggle
 - **Print / PDF** – A4 layout, ready for your company's sign-off table
 - **Edit mode** – enter status and hours per person, edit day labels inline
+- **Custom column headers** – rename "Status" and "Hours" columns to anything you need
+- **Adjustable column widths** – use the slider to balance the space between the two sub-columns
 - **Custom employee names** – add, remove, or rename directly in the table
 - **Dark mode** + dark sheet background
 - **PL / EN** – full support for both languages
@@ -52,6 +54,8 @@ Just open `index.html` in any browser. No server required.
 | Dark mode | Dark UI theme |
 | Dark sheet | Dark sheet background (useful on screen) |
 | Holiday source | Local Polish holidays or fetch via API |
+| Column headers | Customize the "Status" and "Hours" sub-column names (Settings → Column headers) |
+| Column width | Adjust the width ratio between the two sub-columns with a slider (Settings → Column width) |
 | Backup | Export/Import settings as a JSON file |
 
 ---
@@ -68,6 +72,15 @@ State is auto-saved on every change:
 - ✅ table entries (status, hours)
 - ✅ special / normal day toggles
 - ✅ dark mode, language, holiday source
+- ✅ custom column header names
+- ✅ column width ratio
+
+---
+
+## 🖨️ Printing & PDF
+
+Click **Print / Save PDF** to generate a clean A4 portrait document.  
+Custom column headers and width adjustments are fully preserved in the printed output.
 
 ---
 
