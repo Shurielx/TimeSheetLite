@@ -110,43 +110,7 @@ body {
 /* ===== PRINT STYLES ===== */
 @page { margin: 1cm; }
 
-@media print {
-  body { background: none; }
-  #ui-panel { display: none !important; }
-  #sheet-container {
-    position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: auto !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    background: white !important;
-  }
-  #sheet-container .sheet-page {
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-  table { font-size: 9pt !important; }
-  th, td { padding: 3px 4px; }
-  html.dark-mode,
-  html.dark-mode.dark-sheet {
-    --bg-special: #e0e0e0;
-    --bg-sheet: white;
-    --bg-sheet-page: white;
-    --border-table: #000;
-    --text-primary: black;
-    --text-heading: black;
-    --text-label: black;
-  }
-  .special-day { background: #e0e0e0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  .edit-controls, .edit-badge { display: none !important; }
-  tbody td:first-child { cursor: default !important; }
-}
+
 
 /* ===== LAYOUT ===== */
 #app {
@@ -619,36 +583,32 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
 }
 
 @media print {
-  /* Usuwamy marginesy systemowe i wymuszamy orientację poziomą */
+  /* 1. Orientacja i marginesy */
   @page {
     size: A4 landscape;
     margin: 8mm !important;
   }
 
-  /* Resetujemy całą strukturę dokumentu, by nie trzymała wysokości */
+  /* 2. Reset struktury dokumentu */
   html, body {
     height: auto !important;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
-    background: transparent !important;
+    background: white !important;
+    color: black !important;
   }
 
-  /* Ukrywamy CAŁĄ zawartość strony domyślnie... */
-  body * {
+  /* 3. JAWNE UKRYWANIE ELEMENTÓW UI */
+  #ui-panel {
     display: none !important;
   }
 
-  /* ...i pokazujemy TYLKO kontener wydruku oraz jego dzieci */
-  #sheet-container,
-  #sheet-container * {
-    display: revert !important;
-  }
-
-  /* Ustawienia dla głównego kontenera tabeli */
-  #sheet-container .sheet-page.landscape {
+  /* 4. WYMUSZENIE WIDOCZNOŚCI KONTENERA ARKUSZA */
+  #sheet-container {
     display: block !important;
+    position: relative !important;
     width: 100% !important;
     max-width: none !important;
     height: auto !important;
@@ -660,9 +620,52 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
     page-break-inside: avoid !important;
   }
 
-  #sheet-container .sheet-page.landscape table {
+  #sheet-container .sheet-page {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 5. Dociągnięcie tabeli */
+  #sheet-container table {
     width: 100% !important;
     table-layout: auto !important;
+    background: white !important;
+    font-size: 9pt !important;
+  }
+
+  #sheet-container th,
+  #sheet-container td {
+    padding: 3px 4px;
+  }
+
+  /* 6. Dark mode override na wydruku – zawsze jasny arkusz */
+  html.dark-mode,
+  html.dark-mode.dark-sheet {
+    --bg-special: #e0e0e0;
+    --bg-sheet: white;
+    --bg-sheet-page: white;
+    --border-table: #000;
+    --text-primary: black;
+    --text-heading: black;
+    --text-label: black;
+  }
+
+  .special-day {
+    background: #e0e0e0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .edit-controls,
+  .edit-badge {
+    display: none !important;
+  }
+
+  tbody td:first-child {
+    cursor: default !important;
   }
 }
 </style>
