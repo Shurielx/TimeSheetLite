@@ -50,6 +50,18 @@ test('selects a different year from the year picker', async ({ page }) => {
   await expect(page.locator('.main-header')).toContainText(String(currentYear + 1));
 });
 
+test('opens a standalone print preview with the current table', async ({ page }) => {
+  await page.locator('#month-label').fill('Printable attendance sheet');
+  const popupPromise = page.waitForEvent('popup');
+  await page.locator('#print-btn').click();
+  const printPage = await popupPromise;
+  await printPage.waitForLoadState('domcontentloaded');
+  await expect(printPage.locator('#attendance-table')).toBeVisible();
+  await expect(printPage.locator('.main-header')).toHaveText('Printable attendance sheet');
+  await expect(printPage.locator('#ui-panel')).toHaveCount(0);
+  await printPage.close();
+});
+
 for (const layout of ['portrait', 'landscape']) {
   test(`uses the A4 printable area in ${layout}`, async ({ page }) => {
     await page.locator('#page-layout').selectOption(layout);

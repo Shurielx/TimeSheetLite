@@ -548,6 +548,98 @@
     saveState();
   }
 
+  function createPrintTable() {
+    const printTable = table.cloneNode(true);
+    const sourceInputs = table.querySelectorAll('input');
+    const printInputs = printTable.querySelectorAll('input');
+    sourceInputs.forEach((input, index) => {
+      const printInput = printInputs[index];
+      if (!printInput) return;
+      if (input.type === 'checkbox') {
+        printInput.closest('.day-special-control')?.remove();
+        return;
+      }
+      printInput.replaceWith(document.createTextNode(input.value));
+    });
+    return printTable;
+  }
+
+  function openPrintPreview() {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      window.alert(t('printPopupBlocked'));
+      return;
+    }
+
+    const printDocument = printWindow.document;
+    printDocument.open();
+    printDocument.write('<!doctype html><html><head><meta charset="UTF-8"><title>TimeSheetLite</title></head><body></body></html>');
+    printDocument.close();
+
+    const style = printDocument.createElement('style');
+    style.textContent = `
+      @page { size: A4 ${state.pageLayout}; margin: 6mm; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: #fff; color: #000; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+      #sheet-container { display: block; width: 100%; }
+      #sheet-container .sheet-page {
+        width: 198mm;
+        max-width: 198mm;
+        min-height: 285mm;
+        padding: 0;
+        margin: 0;
+      }
+      #sheet-container .sheet-page.landscape {
+        width: 285mm;
+        max-width: 285mm;
+        min-height: 198mm;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 9pt;
+        page-break-inside: avoid;
+      }
+      th, td {
+        border: 1px solid #000;
+        padding: 3px 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;
+        vertical-align: middle;
+      }
+      .main-header { font-size: 1.1rem; font-weight: 700; padding: 0.65rem 0.5rem; }
+      thead th { font-weight: 700; font-size: 0.75rem; }
+      thead th.employee-name { font-size: 0.85rem; }
+      thead th.sub-header { font-weight: 600; font-size: 0.7rem; }
+      tbody td { font-size: 0.75rem; }
+      tbody td:first-child { font-weight: 700; }
+      .special-day { background: #e0e0e0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .sheet-page.portrait tbody tr td { height: 4mm; font-size: 10px; padding: 1px 3px; }
+      .sheet-page.landscape tbody tr td { height: 4.8mm; font-size: 11px; padding: 2px 4px; }
+    `;
+    printDocument.head.appendChild(style);
+
+    const container = printDocument.createElement('main');
+    container.id = 'sheet-container';
+    const page = printDocument.createElement('div');
+    page.className = `sheet-page ${state.pageLayout === 'landscape' ? 'landscape' : 'portrait'}`;
+    page.appendChild(createPrintTable());
+    container.appendChild(page);
+    printDocument.body.appendChild(container);
+
+    let printed = false;
+    printWindow.setTimeout(() => {
+      if (printed || printWindow.closed) return;
+      printed = true;
+      printWindow.focus();
+      printWindow.print();
+    }, 50);
+  }
+
   function toggleSettings(event) {
     event.preventDefault();
     const opening = !settingsDetails.open;
@@ -569,7 +661,7 @@
   function onPrint() {
     flushVisibleEdits();
     saveState();
-    window.print();
+    openPrintPreview();
   }
 
   function applyTheme() {
