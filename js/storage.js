@@ -8,6 +8,7 @@
   const MAX_DATA_ENTRIES = 20000;
   const VALID_COUNTRIES = new Set(['PL', 'GB', 'DE', 'FR', 'ES', 'IT', 'US', 'UA', 'CZ', 'SK']);
   const VALID_WIDTH_PRESETS = new Set(['preset-90-10', 'preset-80-20', 'preset-50-50', 'preset-20-80']);
+  const MAX_FILE_SIZE = 1024 * 1024;
 
   function isPlainObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -101,6 +102,9 @@
   }
 
   function createStorage(state) {
+    let dataFileHandle = null;
+    let dataFileWriteQueue = Promise.resolve();
+
     function toSerializableState() {
       return {
         month: state.month,
@@ -157,6 +161,7 @@
     function save() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSerializableState()));
+        queueDataFileSave();
         return true;
       } catch (error) {
         console.warn('Failed to save state:', error);
@@ -199,12 +204,76 @@
       URL.revokeObjectURL(url);
     }
 
+    function queueDataFileSave() {
+      if (!dataFileHandle) return;
+      const payload = JSON.stringify({
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        state: toSerializableState(),
+      }, null, 2);
+      dataFileWriteQueue = dataFileWriteQueue
+        .then(async () => {
+          const writable = await dataFileHandle.createWritable();
+          await writable.write(payload);
+          await writable.close();
+        })
+        .catch(error => console.warn('Failed to save data file:', error));
+    }
+
+    function assertFilePickerSupport() {
+      if (typeof window.showOpenFilePicker !== 'function' || typeof window.showSaveFilePicker !== 'function') {
+        throw new Error('Ta przeglądarka nie obsługuje bezpośredniego wyboru pliku. Użyj eksportu/importu JSON.');
+      }
+    }
+
+    function filePickerTypes() {
+      return [{ description: 'TimeSheetLite JSON', accept: { 'application/json': ['.json'] } }];
+    }
+
+    async function applyFile(file, handle) {
+      if (!file || file.size > MAX_FILE_SIZE) throw new Error('Plik jest pusty albo przekracza limit 1 MB.');
+      const parsed = JSON.parse(await file.text());
+      const importedState = isPlainObject(parsed) && parsed.state !== undefined ? parsed.state : parsed;
+      const previousState = toSerializableState();
+      applyState(importedState);
+      dataFileHandle = handle;
+      if (!save()) {
+        applyState(previousState);
+        dataFileHandle = null;
+        throw new Error('Nie udało się zapisać danych lokalnie.');
+      }
+    }
+
+    async function openDataFile() {
+      assertFilePickerSupport();
+      const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: filePickerTypes(),
+      });
+      await applyFile(await handle.getFile(), handle);
+    }
+
+    async function createDataFile() {
+      assertFilePickerSupport();
+      const handle = await window.showSaveFilePicker({
+        suggestedName: `timesheet-${state.year}-${String(state.month + 1).padStart(2, '0')}.json`,
+        types: filePickerTypes(),
+      });
+      dataFileHandle = handle;
+      await dataFileWriteQueue;
+      queueDataFileSave();
+    }
+
+    function getDataFileName() {
+      return dataFileHandle ? dataFileHandle.name : '';
+    }
+
     function importFromFile(file, onImported, onError) {
       const reportError = error => {
         if (typeof onError === 'function') onError(error);
         else alert('Nie udało się zaimportować pliku: ' + error.message);
       };
-      if (!file || file.size > 1024 * 1024) {
+      if (!file || file.size > MAX_FILE_SIZE) {
         reportError(new Error('plik jest pusty albo przekracza limit 1 MB.'));
         return;
       }
@@ -239,7 +308,7 @@
     // Convert the built-in legacy string list to stable employee records too.
     applyState({});
 
-    return Object.freeze({ save, load, exportToFile, importFromFile, reset });
+    return Object.freeze({ save, load, exportToFile, importFromFile, reset, openDataFile, createDataFile, getDataFileName });
   }
 
   window.TimeSheetStorage = Object.freeze({ create: createStorage });

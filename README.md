@@ -2,7 +2,7 @@
 
 Simple attendance sheet generator for printing or saving as PDF. Everything is kept locally in your browser.
 
-**[Open TimeSheetLite](https://shurielx.github.io/TimeSheetLite/)** · [View the repository](https://github.com/Shurielx/TimeSheetLite) · [Download the latest Windows ZIP](https://github.com/Shurielx/TimeSheetLite/releases/latest)
+**[Open TimeSheetLite](https://shurielx.github.io/TimeSheetLite/)** · [View the repository](https://github.com/Shurielx/TimeSheetLite)
 
 Current release: **v1.0 - Re-Release**. Created by [Shuriel](https://github.com/Shurielx). [Report an issue](https://github.com/Shurielx/TimeSheetLite/issues/new) or [suggest something](https://github.com/Shurielx/TimeSheetLite/issues/new).
 
@@ -13,7 +13,8 @@ Current release: **v1.0 - Re-Release**. Created by [Shuriel](https://github.com/
 - enter status and hours for each day;
 - mark non-working days;
 - print on A4 in portrait or landscape, or save as PDF;
-- export and import a JSON backup.
+- export and import a JSON backup;
+- choose a local JSON data file in Settings (supported browsers save changes back to that file).
 
 ## Quick use
 
@@ -25,13 +26,11 @@ Current release: **v1.0 - Re-Release**. Created by [Shuriel](https://github.com/
 
 Entries are saved only in the browser on the current device. Export a JSON backup before clearing browser data or moving to another computer.
 
-## Windows download
-
-Download `TimeSheetLite-windows.zip` from the latest release, unpack it, and start `Start-TimeSheetLite.cmd`. The launcher checks GitHub for a newer release before opening the app and updates the unpacked folder automatically. You can also open `index.html` directly in a current browser, but that does not run the updater.
-
 ## Privacy
 
-Your data and JSON backups are not encrypted, so use the app on a trusted device and keep backups private. If you select a country other than Poland, the app sends only the selected year and country code to [Nager.Date](https://date.nager.at/) to load public holidays. Attendance data is not sent.
+Your data is stored in the current browser's local storage. GitHub Pages only serves the static application; it does not receive or store your attendance data. The optional local JSON file is read and written directly by your browser and is never uploaded by this application. If you select a country other than Poland, the app sends only the selected year and country code to [Nager.Date](https://date.nager.at/) to load public holidays. Attendance data is not sent.
+
+The direct local-file buttons require a Chromium-based browser on HTTPS (including GitHub Pages). Other browsers can still use JSON export/import. Data and JSON backups are not encrypted, so use a trusted device and keep backups private.
 
 Read [Privacy](PRIVACY.md) before using the app with personal data.
 

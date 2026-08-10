@@ -5,3 +5,8 @@ coverage/
 test-results/
 playwright-report/
 dist/
+
+# Local attendance data and JSON backups
+timesheet-*.json
+*.timesheet.json
+data/

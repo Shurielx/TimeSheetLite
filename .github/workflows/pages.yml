@@ -32,6 +32,10 @@ jobs:
       - name: Check linked local files
         run: test -f css/styles.css && test -f js/app.js && test -f js/storage.js && test -f js/holidays.js && test -f js/i18n.js
 
+      - name: Check Pages does not contain data files
+        run: |
+          ! find . -path './.git' -prune -o -type f \( -iname '*data*.json' -o -iname '*timesheet*.json' \) -print -quit | grep -q .
+
   deploy:
     needs: check
     runs-on: ubuntu-latest
@@ -41,8 +45,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Prepare static Pages site
+        run: |
+          mkdir site
+          cp index.html PRIVACY.md site/
+          cp css/styles.css site/
+          cp js/*.js site/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4

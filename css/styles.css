@@ -282,6 +282,8 @@ details[open] .settings-summary .icon { transform: rotate(12deg); }
 .compact-toggle-label { font-size: 0.85rem; text-transform: none; letter-spacing: 0; font-weight: 500; }
 .backup-actions { gap: 0.35rem; }
 .backup-button { flex: 1; font-size: 0.75rem; padding: 0.4rem 0.5rem; }
+.data-file-actions { display: flex; gap: 0.35rem; margin-top: 0.4rem; }
+.data-file-actions .backup-button { min-width: 0; }
 .reset-actions { margin-top: 0.4rem; }
 .reset-button { width: 100%; font-size: 0.75rem; padding: 0.4rem 0.5rem; }
 .print-actions { margin-top: auto; padding-top: 0.5rem; border-top: 2px solid var(--border-light); }

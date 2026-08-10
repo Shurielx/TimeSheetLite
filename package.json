@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "check": "node --check js/app.js && node --check js/storage.js && node --check js/holidays.js && node --check js/i18n.js",
-    "package:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1 -Version 1.0.0",
     "test": "playwright test"
   },
   "devDependencies": {

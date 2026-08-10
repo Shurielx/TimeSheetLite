@@ -14,7 +14,11 @@
     month: new Date().getMonth(),
     year: new Date().getFullYear(),
     monthLabel: '',
-    employees: ['John Smith', 'Anna Johnson', 'Peter Williams'],
+    employees: [
+      { id: 'emp-default-1', name: 'Employee 1' },
+      { id: 'emp-default-2', name: 'Employee 2' },
+      { id: 'emp-default-3', name: 'Employee 3' },
+    ],
     specialDays: new Set(),
     normalDays: new Set(),
     data: {},
@@ -51,6 +55,9 @@
   const columnWidthPreset = document.getElementById('column-width-preset');
   const pageLayoutSelect = document.getElementById('page-layout');
   const settingsDetails = document.getElementById('dev-settings');
+  const dataFileStatus = document.getElementById('data-file-status');
+  const openDataFileBtn = document.getElementById('open-data-file-btn');
+  const createDataFileBtn = document.getElementById('create-data-file-btn');
   const sheetPage = document.querySelector('.sheet-page');
   const tableHead = document.getElementById('table-head');
   const tableBody = document.getElementById('table-body');
@@ -77,6 +84,13 @@
   function setSaveStatus(ok) {
     saveStatus.textContent = ok ? t('saved') : t('saveError');
     saveStatus.classList.toggle('save-error', !ok);
+  }
+
+  function updateDataFileStatus(message) {
+    const fileName = storage.getDataFileName();
+    dataFileStatus.textContent = message || (fileName
+      ? t('dataFileSelected').replace('{name}', fileName)
+      : t('browserStorage'));
   }
 
   function saveState() {
@@ -689,6 +703,42 @@
     }, error => window.alert(`${t('importFailed')}: ${error.message}`));
   }
 
+  function refreshAfterDataFileChange() {
+    initMonthSelect();
+    populateHolidaySelect();
+    yearBtn.textContent = state.year;
+    monthLabelInput.value = state.monthLabel;
+    langSelect.value = state.lang;
+    holidaySelect.value = state.holidayCountry;
+    darkToggle.checked = state.darkMode;
+    darkSheetToggle.checked = state.darkSheet;
+    columnWidthPreset.value = state.colWidthPreset;
+    pageLayoutSelect.value = state.pageLayout;
+    applyLanguage(state.lang);
+    applyTheme();
+    computeHolidays();
+    render(false);
+    updateDataFileStatus();
+  }
+
+  async function openDataFile() {
+    try {
+      await storage.openDataFile();
+      refreshAfterDataFileChange();
+    } catch (error) {
+      if (error.name !== 'AbortError') window.alert(`${t('dataFileFailed')}: ${error.message}`);
+    }
+  }
+
+  async function createDataFile() {
+    try {
+      await storage.createDataFile();
+      updateDataFileStatus();
+    } catch (error) {
+      if (error.name !== 'AbortError') window.alert(`${t('dataFileFailed')}: ${error.message}`);
+    }
+  }
+
   function resetToDefaults() {
     if (window.confirm(t('resetDefaults') + '?')) storage.reset();
   }
@@ -801,6 +851,8 @@
       if (event.target.files.length) importStateFromFile(event.target.files[0]);
       event.target.value = '';
     });
+    openDataFileBtn.addEventListener('click', openDataFile);
+    createDataFileBtn.addEventListener('click', createDataFile);
     document.getElementById('reset-btn').addEventListener('click', resetToDefaults);
     window.addEventListener('beforeunload', () => {
       flushVisibleEdits();
@@ -811,6 +863,7 @@
     editControls.classList.toggle('is-visible', state.editMode);
     applyLanguage(state.lang);
     applyTheme();
+    updateDataFileStatus();
     computeHolidays();
     render(false);
     if (loaded) saveState();

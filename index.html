@@ -160,10 +160,15 @@
           <button type="button" class="btn btn-secondary backup-button" id="import-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-upload"></use></svg><span data-i18n="importJson">Importuj JSON</span></button>
           </div>
           <input class="is-hidden" type="file" id="import-file" accept=".json">
+          <div class="data-file-actions">
+            <button type="button" class="btn btn-secondary backup-button" id="open-data-file-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-upload"></use></svg><span data-i18n="openDataFile">Wybierz plik danych</span></button>
+            <button type="button" class="btn btn-secondary backup-button" id="create-data-file-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-download"></use></svg><span data-i18n="createDataFile">Utwórz plik danych</span></button>
+          </div>
+          <p id="data-file-status" class="field-status" aria-live="polite"></p>
            <div class="reset-actions">
              <button type="button" class="btn btn-danger reset-button" id="reset-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-refresh"></use></svg><span data-i18n="resetDefaults">Przywróć domyślne</span></button>
            </div>
-           <p class="privacy-notice" data-i18n="privacyNotice">Data is stored locally without encryption. JSON backups contain personal data. Selecting a country other than Poland sends the year and country to an external holiday API.</p>
+           <p class="privacy-notice" data-i18n="privacyNotice">Dane są przechowywane lokalnie. Pages i GitHub nie otrzymują wpisów, osób ani kopii JSON.</p>
            <p class="privacy-notice" data-i18n="privacyDisclaimer">Use the app only on a trusted device and keep backups private. The author cannot protect data after it leaves your browser or device.</p>
            <a class="privacy-link" href="PRIVACY.md" target="_blank" rel="noopener" data-i18n="privacyLink">Privacy details</a>
         </div>
