@@ -50,6 +50,42 @@ test('selects a different year from the year picker', async ({ page }) => {
   await expect(page.locator('.main-header')).toContainText(String(currentYear + 1));
 });
 
+test('keeps Polish and English interface translations complete', async ({ page }) => {
+  const translationKeys = await page.evaluate(() => ({
+    pl: Object.keys(window.TimeSheetI18n.I18N.pl).sort(),
+    en: Object.keys(window.TimeSheetI18n.I18N.en).sort(),
+  }));
+  expect(translationKeys.pl).toEqual(translationKeys.en);
+
+  await page.locator('#lang-select').selectOption('pl');
+  await expect(page.locator('h1')).toContainText('Generator listy obecności');
+  await expect(page.locator('[data-i18n="backup"]')).toHaveText('Kopia zapasowa');
+  await expect(page.locator('[data-i18n="privacyDisclaimer"]')).toContainText('Korzystaj z aplikacji');
+  await expect(page.locator('[data-i18n="privacyLink"]')).toHaveText('Szczegóły prywatności');
+  await expect(page.locator('.privacy-link')).toHaveAttribute('href', /PRIVACY\.pl\.md$/);
+
+  await page.locator('#lang-select').selectOption('en');
+  await expect(page.locator('h1')).toContainText('Attendance Generator');
+  await expect(page.locator('[data-i18n="backup"]')).toHaveText('Backup');
+  await expect(page.locator('[data-i18n="privacyDisclaimer"]')).toContainText('Use the app');
+  await expect(page.locator('[data-i18n="privacyLink"]')).toHaveText('Privacy details');
+  await expect(page.locator('.privacy-link')).toHaveAttribute('href', /PRIVACY\.md$/);
+});
+
+test.describe('browser language detection', () => {
+  test.use({ locale: 'pl-PL' });
+
+  test('uses Polish only for a Polish browser and preserves manual English choice', async ({ page }) => {
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pl');
+    await expect(page.locator('[data-i18n="title"]')).toHaveText('Generator listy obecności');
+
+    await page.locator('#lang-select').selectOption('en');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('[data-i18n="title"]')).toHaveText('Attendance Generator');
+  });
+});
+
 test('opens a standalone print preview with the current table', async ({ page }) => {
   await page.locator('#month-label').fill('Printable attendance sheet');
   const popupPromise = page.waitForEvent('popup');

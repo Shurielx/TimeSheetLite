@@ -10,6 +10,11 @@
     computePolishHolidaysLocally,
   } = window.TimeSheetHolidays;
 
+  function detectBrowserLanguage() {
+    const browserLanguage = navigator.language || (navigator.languages && navigator.languages[0]) || 'en';
+    return browserLanguage.toLowerCase().startsWith('pl') ? 'pl' : 'en';
+  }
+
   const state = {
     month: new Date().getMonth(),
     year: new Date().getFullYear(),
@@ -24,7 +29,7 @@
     data: {},
     dayLabels: {},
     holidays: new Set(),
-    lang: 'en',
+    lang: detectBrowserLanguage(),
     holidayCountry: 'PL',
     editMode: false,
     darkMode: false,
@@ -148,6 +153,10 @@
     document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
       const key = element.dataset.i18nAriaLabel;
       if (translations[key] !== undefined) element.setAttribute('aria-label', translations[key]);
+    });
+    document.querySelectorAll('[data-i18n-href]').forEach(element => {
+      const key = element.dataset.i18nHref;
+      if (translations[key] !== undefined) element.href = translations[key];
     });
     table.setAttribute('aria-label', translations.tableLabel);
     initMonthSelect();
@@ -323,7 +332,7 @@
         checkbox.className = 'day-special-toggle';
         checkbox.dataset.day = day;
         checkbox.checked = state.specialDays.has(key) || (special && !state.normalDays.has(key));
-        checkbox.setAttribute('aria-label', `${t('specialDayLabel')} ${day}`);
+        checkbox.setAttribute('aria-label', t('specialDayLabel').replace('{day}', day));
         control.appendChild(checkbox);
         dayCell.appendChild(control);
       }

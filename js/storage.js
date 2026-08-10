@@ -26,6 +26,25 @@
     return value.trim().slice(0, MAX_TEXT_LENGTH);
   }
 
+  function message(state, key, fallback, replacements = {}) {
+    const translations = window.TimeSheetI18n && window.TimeSheetI18n.I18N;
+    let value = translations && translations[state.lang] && translations[state.lang][key];
+    if (value === undefined && translations && translations.en) value = translations.en[key];
+    value = value || fallback;
+    Object.entries(replacements).forEach(([name, replacement]) => {
+      value = value.replace(`{${name}}`, replacement);
+    });
+    return value;
+  }
+
+  function parseJson(value, state) {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      throw new Error(message(state, 'invalidJson', 'The file does not contain valid JSON.'));
+    }
+  }
+
   function validDateKey(value) {
     if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
     const [year, month, day] = value.split('-').map(Number);
@@ -35,38 +54,41 @@
       date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
   }
 
-  function normalizeEmployees(input) {
+  function normalizeEmployees(input, state) {
     if (!Array.isArray(input) || input.length === 0 || input.length > MAX_EMPLOYEES) {
-      throw new Error('Lista pracowników ma nieprawidłowy rozmiar.');
+      throw new Error(message(state, 'employeeListInvalid', 'The employee list has an invalid size.'));
     }
 
     const ids = new Set();
     const employees = input.map((item, index) => {
       const legacyName = typeof item === 'string';
-      const name = text(legacyName ? item : item && item.name, `Pracownik ${index + 1}`);
+      const fallbackName = message(state, 'employeeFallback', 'Employee {index}', { index: index + 1 });
+      const name = text(legacyName ? item : item && item.name, fallbackName);
       let id = legacyName ? newEmployeeId() : item && item.id;
       if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id) || ids.has(id)) {
         id = newEmployeeId();
       }
       ids.add(id);
-      return { id, name: name || `Pracownik ${index + 1}` };
+      return { id, name: name || fallbackName };
     });
 
     return { employees, ids, legacy: input.some(item => typeof item === 'string') };
   }
 
-  function normalizeDateSet(value, fieldName) {
+  function normalizeDateSet(value, fieldName, state) {
     if (value === undefined) return new Set();
     if (!Array.isArray(value) || value.length > MAX_DATES) {
-      throw new Error(`${fieldName} ma nieprawidłowy format.`);
+      throw new Error(message(state, 'invalidFormat', '{field} has an invalid format.', {
+        field: message(state, fieldName, fieldName),
+      }));
     }
     return new Set(value.filter(validDateKey));
   }
 
-  function normalizeData(value, employees, legacyEmployees) {
+  function normalizeData(value, employees, legacyEmployees, state) {
     if (value === undefined) return Object.create(null);
     if (!isPlainObject(value) || Object.keys(value).length > MAX_DATA_ENTRIES) {
-      throw new Error('Wpisy tabeli mają nieprawidłowy format.');
+      throw new Error(message(state, 'dataInvalid', 'The table entries have an invalid format.'));
     }
 
     const ids = new Set(employees.map(employee => employee.id));
@@ -89,10 +111,10 @@
     return result;
   }
 
-  function normalizeLabels(value) {
+  function normalizeLabels(value, state) {
     if (value === undefined) return Object.create(null);
     if (!isPlainObject(value) || Object.keys(value).length > MAX_DATES) {
-      throw new Error('Opisy dni mają nieprawidłowy format.');
+      throw new Error(message(state, 'labelsInvalid', 'The day labels have an invalid format.'));
     }
     const result = Object.create(null);
     Object.entries(value).forEach(([key, label]) => {
@@ -128,13 +150,15 @@
     }
 
     function applyState(data) {
-      if (!isPlainObject(data)) throw new Error('Kopia nie zawiera prawidłowego stanu.');
+      if (!isPlainObject(data)) throw new Error(message(state, 'stateInvalid', 'The backup does not contain a valid state.'));
+      const language = data.lang === 'pl' || data.lang === 'en' ? data.lang : state.lang;
+      const messageState = { lang: language };
       const employeeInput = data.employees === undefined ? state.employees : data.employees;
-      const employeeResult = normalizeEmployees(employeeInput);
+      const employeeResult = normalizeEmployees(employeeInput, messageState);
       const year = data.year === undefined ? state.year : data.year;
       const month = data.month === undefined ? state.month : data.month;
-      if (!Number.isInteger(year) || year < 1900 || year > 2200) throw new Error('Nieprawidłowy rok.');
-      if (!Number.isInteger(month) || month < 0 || month > 11) throw new Error('Nieprawidłowy miesiąc.');
+      if (!Number.isInteger(year) || year < 1900 || year > 2200) throw new Error(message(messageState, 'invalidYear', 'Invalid year.'));
+      if (!Number.isInteger(month) || month < 0 || month > 11) throw new Error(message(messageState, 'invalidMonth', 'Invalid month.'));
 
       const next = {
         month,
@@ -144,11 +168,11 @@
         editMode: Boolean(data.editMode),
         darkMode: Boolean(data.darkMode),
         darkSheet: Boolean(data.darkSheet),
-        specialDays: normalizeDateSet(data.specialDays, 'Dni specjalne'),
-        normalDays: normalizeDateSet(data.normalDays, 'Dni robocze'),
-        data: normalizeData(data.data, employeeResult.employees, employeeResult.legacy),
-        dayLabels: normalizeLabels(data.dayLabels),
-        lang: data.lang === 'pl' || data.lang === 'en' ? data.lang : state.lang,
+        specialDays: normalizeDateSet(data.specialDays, 'specialDays', messageState),
+        normalDays: normalizeDateSet(data.normalDays, 'normalDays', messageState),
+        data: normalizeData(data.data, employeeResult.employees, employeeResult.legacy, messageState),
+        dayLabels: normalizeLabels(data.dayLabels, messageState),
+        lang: language,
         holidayCountry: VALID_COUNTRIES.has(data.holidayCountry) ? data.holidayCountry : state.holidayCountry,
         colStatusName: text(data.colStatusName),
         colHoursName: text(data.colHoursName),
@@ -174,8 +198,8 @@
       try {
         raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return null;
-        if (raw.length > 1024 * 1024) throw new Error('Zapisane dane przekraczają limit 1 MB.');
-        applyState(JSON.parse(raw));
+        if (raw.length > 1024 * 1024) throw new Error(message(state, 'savedDataTooLarge', 'The saved data exceeds the 1 MB limit.'));
+        applyState(parseJson(raw, state));
         return true;
       } catch (error) {
         console.warn('Failed to load state:', error);
@@ -222,7 +246,7 @@
 
     function assertFilePickerSupport() {
       if (typeof window.showOpenFilePicker !== 'function' || typeof window.showSaveFilePicker !== 'function') {
-        throw new Error('Ta przeglądarka nie obsługuje bezpośredniego wyboru pliku. Użyj eksportu/importu JSON.');
+        throw new Error(message(state, 'filePickerUnsupported', 'This browser does not support direct file selection. Use JSON export/import instead.'));
       }
     }
 
@@ -231,8 +255,8 @@
     }
 
     async function applyFile(file, handle) {
-      if (!file || file.size > MAX_FILE_SIZE) throw new Error('Plik jest pusty albo przekracza limit 1 MB.');
-      const parsed = JSON.parse(await file.text());
+      if (!file || file.size > MAX_FILE_SIZE) throw new Error(message(state, 'fileTooLarge', 'The file is empty or exceeds the 1 MB limit.'));
+      const parsed = parseJson(await file.text(), state);
       const importedState = isPlainObject(parsed) && parsed.state !== undefined ? parsed.state : parsed;
       const previousState = toSerializableState();
       applyState(importedState);
@@ -240,7 +264,7 @@
       if (!save()) {
         applyState(previousState);
         dataFileHandle = null;
-        throw new Error('Nie udało się zapisać danych lokalnie.');
+        throw new Error(message(state, 'saveError', 'Could not save data locally.'));
       }
     }
 
@@ -271,29 +295,29 @@
     function importFromFile(file, onImported, onError) {
       const reportError = error => {
         if (typeof onError === 'function') onError(error);
-        else alert('Nie udało się zaimportować pliku: ' + error.message);
+        else alert(`${message(state, 'importFailed', 'Import failed')}: ${error.message}`);
       };
       if (!file || file.size > MAX_FILE_SIZE) {
-        reportError(new Error('plik jest pusty albo przekracza limit 1 MB.'));
+        reportError(new Error(message(state, 'fileTooLarge', 'The file is empty or exceeds the 1 MB limit.')));
         return;
       }
       const reader = new FileReader();
       reader.onload = event => {
         try {
-          const parsed = JSON.parse(event.target.result);
+          const parsed = parseJson(event.target.result, state);
           const importedState = isPlainObject(parsed) && parsed.state !== undefined ? parsed.state : parsed;
           const previousState = toSerializableState();
           applyState(importedState);
           if (!save()) {
             applyState(previousState);
-            throw new Error('Nie udało się zapisać zaimportowanych danych.');
+            throw new Error(message(state, 'importedSaveFailed', 'Could not save the imported data.'));
           }
           onImported();
         } catch (error) {
           reportError(error);
         }
       };
-      reader.onerror = () => reportError(new Error('Nie udało się odczytać pliku kopii.'));
+      reader.onerror = () => reportError(new Error(message(state, 'fileReadFailed', 'Could not read the backup file.')));
       reader.readAsText(file);
     }
 

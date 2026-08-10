@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://date.nager.at; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none';">
-<title>TimeSheetLite — Attendance Generator v1.0 - Re-Release</title>
+<title data-i18n="pageTitle">TimeSheetLite — Attendance Generator v1.0 - Re-Release</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -112,18 +112,18 @@
     </div>
 
     <div class="control-group settings-section">
-      <label class="settings-label" for="page-layout" data-i18n="pageLayout">Układ strony</label>
+      <label class="settings-label" for="page-layout" data-i18n="pageLayout">Page layout</label>
       <div class="control-row">
         <select class="form-control" id="page-layout">
-          <option value="portrait" data-i18n="pageLayoutPortrait">Pionowy (Portrait)</option>
-          <option value="landscape" data-i18n="pageLayoutLandscape">Poziomy (Landscape)</option>
+          <option value="portrait" data-i18n="pageLayoutPortrait">Portrait</option>
+          <option value="landscape" data-i18n="pageLayoutLandscape">Landscape</option>
         </select>
       </div>
     </div>
 
     <!-- Language toggle -->
     <div class="control-group settings-section">
-      <label class="settings-label" for="lang-select" data-i18n="language">Język / Language</label>
+      <label class="settings-label" for="lang-select" data-i18n="language">Language</label>
       <div class="control-row">
         <select class="form-control" id="lang-select">
            <option value="pl">Polski</option>
@@ -146,7 +146,7 @@
           </div>
         </div>
         <div class="control-group">
-          <label for="holiday-country" data-i18n="holidayCountry">Holidays</label>
+          <label for="holiday-country" data-i18n="holidayCountry">Holiday country</label>
           <div class="control-row">
             <select class="form-control" id="holiday-country">
             </select>
@@ -168,9 +168,9 @@
            <div class="reset-actions">
              <button type="button" class="btn btn-danger reset-button" id="reset-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-refresh"></use></svg><span data-i18n="resetDefaults">Przywróć domyślne</span></button>
            </div>
-           <p class="privacy-notice" data-i18n="privacyNotice">Dane są przechowywane lokalnie. Pages i GitHub nie otrzymują wpisów, osób ani kopii JSON.</p>
+           <p class="privacy-notice" data-i18n="privacyNotice">Data is stored locally in this browser. GitHub Pages and the repository do not receive entries, people, or JSON backups.</p>
            <p class="privacy-notice" data-i18n="privacyDisclaimer">Use the app only on a trusted device and keep backups private. The author cannot protect data after it leaves your browser or device.</p>
-           <a class="privacy-link" href="PRIVACY.md" target="_blank" rel="noopener" data-i18n="privacyLink">Privacy details</a>
+           <a class="privacy-link" href="PRIVACY.md" data-i18n-href="privacyHref" target="_blank" rel="noopener" data-i18n="privacyLink">Privacy details</a>
         </div>
       </div>
     </details>
