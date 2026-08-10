@@ -1,8 +1,10 @@
-# TimeSheetLite
+# TimeSheetLite v1.0 - Re-Release
 
 Simple attendance sheet generator for printing or saving as PDF. Everything is kept locally in your browser.
 
 **[Open TimeSheetLite](https://shurielx.github.io/TimeSheetLite/)** · [View the repository](https://github.com/Shurielx/TimeSheetLite) · [Download the latest Windows ZIP](https://github.com/Shurielx/TimeSheetLite/releases/latest)
+
+Current release: **v1.0 - Re-Release**. Created by [Shuriel](https://github.com/Shurielx). [Report an issue](https://github.com/Shurielx/TimeSheetLite/issues/new) or [suggest something](https://github.com/Shurielx/TimeSheetLite/issues/new).
 
 ## What you can do
 

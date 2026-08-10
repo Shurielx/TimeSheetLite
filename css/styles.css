@@ -171,6 +171,14 @@ body {
   gap: 0.55rem;
 }
 
+.app-version {
+  color: var(--text-label);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
 .control-group {
   display: flex;
   flex-direction: column;
@@ -218,6 +226,10 @@ body {
 }
 
 .control-row input[type="number"] { width: 5rem; flex: 0 0 5rem; }
+
+.control-row select:active { transform: scale(0.985); }
+.control-row select.has-changed,
+.btn.has-changed { animation: control-change 0.35s var(--ease-out); }
 
 .form-control {
   flex: 1;
@@ -665,9 +677,32 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  max-height: 900px;
+  overflow: hidden;
   padding: 0.5rem 0;
-  animation: settings-in 0.35s var(--ease-out) both;
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height 0.3s var(--ease-out), opacity 0.22s ease, padding 0.3s var(--ease-out), transform 0.3s var(--ease-out);
 }
+
+details:not([open]) .dev-settings,
+details.is-closing .dev-settings {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.app-meta {
+  color: var(--text-label);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-align: center;
+}
+.app-meta a { color: var(--accent-strong); font-weight: 600; text-decoration: none; transition: color 0.2s ease; }
+.app-meta a:hover { color: var(--accent); text-decoration: underline; }
+.app-meta-separator { padding: 0 0.15rem; opacity: 0.65; }
 
 @keyframes panel-in {
   from { opacity: 0; transform: translateX(-18px); }
@@ -693,6 +728,19 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes control-change {
+  0% { box-shadow: 0 0 0 0 var(--focus-ring); }
+  45% { box-shadow: 0 0 0 4px var(--focus-ring); }
+  100% { box-shadow: 0 0 0 0 var(--focus-ring); }
+}
+
+@keyframes sheet-update {
+  0% { opacity: 0.72; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.sheet-page.is-changing { animation: sheet-update 0.42s var(--ease-out); }
 
 @keyframes edit-controls-in {
   from { opacity: 0; transform: translateY(-8px); }

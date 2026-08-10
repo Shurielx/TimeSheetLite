@@ -48,10 +48,9 @@
   const saveStatus = document.getElementById('save-status');
   const darkToggle = document.getElementById('dark-toggle');
   const darkSheetToggle = document.getElementById('dark-sheet-toggle');
-  const colStatusNameInput = document.getElementById('col-status-name');
-  const colHoursNameInput = document.getElementById('col-hours-name');
   const columnWidthPreset = document.getElementById('column-width-preset');
   const pageLayoutSelect = document.getElementById('page-layout');
+  const settingsDetails = document.getElementById('dev-settings');
   const sheetPage = document.querySelector('.sheet-page');
   const tableHead = document.getElementById('table-head');
   const tableBody = document.getElementById('table-body');
@@ -217,7 +216,7 @@
     printOrientationStyle.textContent = `@page { size: A4 ${state.pageLayout}; margin: 6mm; }`;
   }
 
-  function render(syncEdits = false) {
+  function render(syncEdits = false, animate = false) {
     if (syncEdits) flushVisibleEdits();
 
     const days = daysInMonth(state.month, state.year);
@@ -268,10 +267,17 @@
     const statusLabel = state.colStatusName.trim() || t('status');
     const hoursLabel = state.colHoursName.trim() || t('hours');
     employees.forEach(() => {
-      const statusHeader = makeElement('th', 'sub-header cell-status', statusLabel);
+      const statusHeader = makeElement('th', 'sub-header cell-status');
       statusHeader.style.width = statusWidth;
-      const hoursHeader = makeElement('th', 'sub-header cell-hours', hoursLabel);
+      const hoursHeader = makeElement('th', 'sub-header cell-hours');
       hoursHeader.style.width = hoursWidth;
+      if (state.editMode) {
+        statusHeader.appendChild(createColumnHeaderInput(statusLabel, 'colStatusName'));
+        hoursHeader.appendChild(createColumnHeaderInput(hoursLabel, 'colHoursName'));
+      } else {
+        statusHeader.textContent = statusLabel;
+        hoursHeader.textContent = hoursLabel;
+      }
       subHeaderRow.append(statusHeader, hoursHeader);
     });
     tableHead.appendChild(subHeaderRow);
@@ -350,6 +356,32 @@
     table.classList.toggle('edit-mode', state.editMode);
     updateEmployeeListUI();
     updatePrintStyle();
+    if (animate) animateSheet();
+  }
+
+  function createColumnHeaderInput(label, field) {
+    const input = document.createElement('input');
+    input.className = 'table-input column-header-input';
+    input.value = field === 'colStatusName' ? state.colStatusName : state.colHoursName;
+    input.placeholder = label;
+    input.maxLength = 100;
+    input.dataset.field = field;
+    input.setAttribute('aria-label', label);
+    return input;
+  }
+
+  function animateSheet() {
+    sheetPage.classList.remove('is-changing');
+    void sheetPage.offsetWidth;
+    sheetPage.classList.add('is-changing');
+    window.setTimeout(() => sheetPage.classList.remove('is-changing'), 450);
+  }
+
+  function animateControl(control) {
+    control.classList.remove('has-changed');
+    void control.offsetWidth;
+    control.classList.add('has-changed');
+    window.setTimeout(() => control.classList.remove('has-changed'), 350);
   }
 
   function updateEmployeeListUI() {
@@ -382,7 +414,7 @@
       return;
     }
     state.employees.push({ id: createEmployeeId(), name: `${t('newEmployee')} ${state.employees.length + 1}` });
-    render(false);
+    render(false, true);
     saveState();
   }
 
@@ -410,6 +442,13 @@
     if (input.matches('.employee-name-input')) {
       const employee = state.employees.find(item => item.id === input.dataset.employeeId);
       if (employee) employee.name = singleLine(input.value, 100) || employee.name;
+    } else if (input.matches('.column-header-input')) {
+      state[input.dataset.field] = singleLine(input.value, 100);
+      document.querySelectorAll(`.column-header-input[data-field="${input.dataset.field}"]`).forEach(other => {
+        if (other !== input) other.value = state[input.dataset.field];
+      });
+      scheduleSave();
+      return;
     } else if (input.matches('.day-label-input')) {
       state.dayLabels[input.dataset.date] = singleLine(input.value, 30);
     } else if (input.matches('.cell-input')) {
@@ -454,11 +493,12 @@
 
   function onMonthChange() {
     flushVisibleEdits();
+    animateControl(monthSelect);
     state.month = Number(monthSelect.value);
     state.monthLabel = '';
     monthLabelInput.value = '';
     computeHolidays();
-    render(false);
+    render(false, true);
     saveState();
   }
 
@@ -508,6 +548,24 @@
     saveState();
   }
 
+  function toggleSettings(event) {
+    event.preventDefault();
+    const opening = !settingsDetails.open;
+    if (opening) {
+      settingsDetails.classList.remove('is-closing');
+      settingsDetails.open = true;
+      requestAnimationFrame(() => settingsDetails.classList.add('is-opening'));
+      window.setTimeout(() => settingsDetails.classList.remove('is-opening'), 350);
+      return;
+    }
+    settingsDetails.classList.remove('is-opening');
+    settingsDetails.classList.add('is-closing');
+    window.setTimeout(() => {
+      settingsDetails.open = false;
+      settingsDetails.classList.remove('is-closing');
+    }, 300);
+  }
+
   function onPrint() {
     flushVisibleEdits();
     saveState();
@@ -530,8 +588,6 @@
       holidaySelect.value = state.holidayCountry;
       darkToggle.checked = state.darkMode;
       darkSheetToggle.checked = state.darkSheet;
-      colStatusNameInput.value = state.colStatusName;
-      colHoursNameInput.value = state.colHoursName;
       columnWidthPreset.value = state.colWidthPreset;
       pageLayoutSelect.value = state.pageLayout;
       applyLanguage(state.lang);
@@ -555,8 +611,6 @@
     holidaySelect.value = state.holidayCountry;
     darkToggle.checked = state.darkMode;
     darkSheetToggle.checked = state.darkSheet;
-    colStatusNameInput.value = state.colStatusName;
-    colHoursNameInput.value = state.colHoursName;
     columnWidthPreset.value = state.colWidthPreset;
     pageLayoutSelect.value = state.pageLayout;
 
@@ -585,6 +639,7 @@
       render(false);
     });
     editToggle.addEventListener('change', onEditToggle);
+    settingsDetails.querySelector('summary').addEventListener('click', toggleSettings);
     table.addEventListener('input', onTableInput);
     tableBody.addEventListener('change', onDayCheckboxChange);
     addEmployeeBtn.addEventListener('click', addEmployee);
@@ -592,22 +647,25 @@
     todayBtn.addEventListener('click', () => {
       const now = new Date();
       flushVisibleEdits();
+      animateControl(todayBtn);
       state.month = now.getMonth();
       state.year = now.getFullYear();
       state.monthLabel = '';
       monthLabelInput.value = '';
       yearBtn.textContent = state.year;
       computeHolidays();
-      render(false);
+      render(false, true);
       saveState();
     });
     langSelect.addEventListener('change', () => {
       flushVisibleEdits();
+      animateControl(langSelect);
       applyLanguage(langSelect.value);
       saveState();
     });
     holidaySelect.addEventListener('change', () => {
       flushVisibleEdits();
+      animateControl(holidaySelect);
       state.holidayCountry = holidaySelect.value;
       computeHolidays();
       render(false);
@@ -627,28 +685,18 @@
       applyTheme();
       saveState();
     });
-    colStatusNameInput.addEventListener('input', () => {
-      flushVisibleEdits();
-      state.colStatusName = colStatusNameInput.value.slice(0, 100);
-      render(false);
-      saveState();
-    });
-    colHoursNameInput.addEventListener('input', () => {
-      flushVisibleEdits();
-      state.colHoursName = colHoursNameInput.value.slice(0, 100);
-      render(false);
-      saveState();
-    });
     columnWidthPreset.addEventListener('change', () => {
       flushVisibleEdits();
       state.colWidthPreset = columnWidthPreset.value;
-      render(false);
+      animateControl(columnWidthPreset);
+      render(false, true);
       saveState();
     });
     pageLayoutSelect.addEventListener('change', () => {
       flushVisibleEdits();
       state.pageLayout = pageLayoutSelect.value === 'landscape' ? 'landscape' : 'portrait';
-      render(false);
+      animateControl(pageLayoutSelect);
+      render(false, true);
       saveState();
     });
     document.getElementById('export-btn').addEventListener('click', () => {

@@ -14,6 +14,7 @@
   const I18N = {
     pl: {
        title: 'Generator Listy',
+       version: 'v1.0 - Re-Release',
       monthYear: 'Miesiąc i rok',
       monthLabel: 'Nazwa miesiąca (opcjonalnie)',
       monthPlaceholder: 'np. LIPIEC 2026',
@@ -64,9 +65,13 @@
        pageLayoutLandscape: 'Poziomy (Landscape)',
        employeeLimit: 'Dla czytelnego wydruku A4 można dodać maksymalnie 8 osób.',
        invalidHours: 'Podaj liczbę od 0 do 24, maksymalnie z dwoma miejscami po przecinku.',
+       madeBy: 'Autor:',
+       reportIssue: 'Zgłoś problem',
+       suggestSomething: 'Zaproponuj zmianę',
     },
     en: {
        title: 'Attendance Generator',
+       version: 'v1.0 - Re-Release',
       monthYear: 'Month and year',
       monthLabel: 'Month label (optional)',
       monthPlaceholder: 'e.g. JULY 2026',
@@ -117,6 +122,9 @@
        pageLayoutLandscape: 'Landscape',
        employeeLimit: 'For a readable A4 printout, you can add up to 8 employees.',
        invalidHours: 'Enter a number from 0 to 24, with up to two decimal places.',
+       madeBy: 'Made by',
+       reportIssue: 'Report an issue',
+       suggestSomething: 'Suggest something',
     },
   };
 

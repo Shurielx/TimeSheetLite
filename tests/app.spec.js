@@ -29,6 +29,27 @@ test('limits the sheet to eight employees', async ({ page }) => {
   await expect(page.locator('.employee-item')).toHaveCount(8);
 });
 
+test('edits column headers directly in the sheet', async ({ page }) => {
+  await page.locator('#edit-toggle').check();
+  const headers = page.locator('.column-header-input');
+  await headers.nth(0).fill('Presence');
+  await headers.nth(1).fill('Total hours');
+  await headers.nth(1).blur();
+  await page.waitForTimeout(400);
+  await page.reload();
+  await page.locator('#edit-toggle').check();
+  await expect(headers.nth(0)).toHaveValue('Presence');
+  await expect(headers.nth(1)).toHaveValue('Total hours');
+});
+
+test('selects a different year from the year picker', async ({ page }) => {
+  const currentYear = Number(await page.locator('#year-btn').textContent());
+  await page.locator('#year-btn').click();
+  await page.locator('.year-tile').filter({ hasText: String(currentYear + 1) }).click();
+  await expect(page.locator('#year-btn')).toHaveText(String(currentYear + 1));
+  await expect(page.locator('.main-header')).toContainText(String(currentYear + 1));
+});
+
 for (const layout of ['portrait', 'landscape']) {
   test(`uses the A4 printable area in ${layout}`, async ({ page }) => {
     await page.locator('#page-layout').selectOption(layout);

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://date.nager.at; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none';">
-<title>TimeSheetLite — Attendance Sheet Generator</title>
+<title>TimeSheetLite — Attendance Generator v1.0 - Re-Release</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -52,7 +52,7 @@
 <div id="app">
   <!-- UI Panel -->
   <aside id="ui-panel">
-    <h1><svg class="icon icon-brand" aria-hidden="true" focusable="false"><use href="#icon-brand"></use></svg><span data-i18n="title">Attendance Generator</span></h1>
+    <h1><svg class="icon icon-brand" aria-hidden="true" focusable="false"><use href="#icon-brand"></use></svg><span data-i18n="title">Attendance Generator</span> <span class="app-version" data-i18n="version">v1.0 - Re-Release</span></h1>
 
     <div class="control-group">
       <label for="month-select" data-i18n="monthYear">Month and year</label>
@@ -96,15 +96,6 @@
       </div>
       <div class="btn-group">
         <button type="button" class="btn btn-primary" id="add-employee-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-plus"></use></svg><span data-i18n="add">Add</span></button>
-      </div>
-      <div class="control-group settings-section settings-section-spaced">
-        <label class="settings-label" for="col-status-name" data-i18n="columnHeaders">Column headers</label>
-        <div class="control-row">
-          <label class="sr-only" for="col-status-name" data-i18n="statusColumnName">Status column name</label>
-          <input class="form-control form-control-small" type="text" id="col-status-name" data-i18n-placeholder="statusPlaceholder" placeholder="Status" maxlength="100">
-          <label class="sr-only" for="col-hours-name" data-i18n="hoursColumnName">Hours column name</label>
-          <input class="form-control form-control-small" type="text" id="col-hours-name" data-i18n-placeholder="hoursPlaceholder" placeholder="Hours" maxlength="100">
-        </div>
       </div>
     </div>
 
@@ -181,6 +172,14 @@
 
     <div class="print-actions">
        <button type="button" class="btn btn-print" id="print-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-printer"></use></svg><span data-i18n="print">Print / Save PDF</span></button>
+    </div>
+    <div class="app-meta">
+      <span data-i18n="madeBy">Made by</span>
+      <a href="https://github.com/Shurielx" target="_blank" rel="noopener">Shuriel</a>
+      <span class="app-meta-separator" aria-hidden="true">·</span>
+      <a href="https://github.com/Shurielx/TimeSheetLite/issues/new" target="_blank" rel="noopener" data-i18n="reportIssue">Report an issue</a>
+      <span class="app-meta-separator" aria-hidden="true">·</span>
+      <a href="https://github.com/Shurielx/TimeSheetLite/issues/new" target="_blank" rel="noopener" data-i18n="suggestSomething">Suggest something</a>
     </div>
   </aside>
 
