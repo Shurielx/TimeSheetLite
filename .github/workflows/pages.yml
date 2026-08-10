@@ -49,8 +49,9 @@ jobs:
         run: |
           mkdir site
           cp index.html PRIVACY.md PRIVACY.pl.md site/
-          cp css/styles.css site/
-          cp js/*.js site/
+          mkdir site/css site/js
+          cp css/styles.css site/css/
+          cp js/*.js site/js/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
