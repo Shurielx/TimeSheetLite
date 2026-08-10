@@ -104,6 +104,18 @@
     return element;
   }
 
+  function createIcon(name, className = '') {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.classList.add('icon');
+    if (className) icon.classList.add(className);
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('focusable', 'false');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', `#icon-${name}`);
+    icon.appendChild(use);
+    return icon;
+  }
+
   function applyLanguage(lang) {
     state.lang = lang === 'pl' ? 'pl' : 'en';
     document.documentElement.lang = state.lang;
@@ -125,7 +137,6 @@
       if (translations[key] !== undefined) element.setAttribute('aria-label', translations[key]);
     });
     table.setAttribute('aria-label', translations.tableLabel);
-    document.querySelector('#ui-panel h1').textContent = translations.title;
     initMonthSelect();
     populateHolidaySelect();
     updateHolidayStatus();
@@ -146,9 +157,8 @@
   function populateHolidaySelect() {
     const language = state.lang === 'en' ? 'en' : 'pl';
     holidaySelect.replaceChildren();
-    const flags = { PL: '🇵🇱', GB: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷', ES: '🇪🇸', IT: '🇮🇹', US: '🇺🇸', UA: '🇺🇦', CZ: '🇨🇿', SK: '🇸🇰' };
     Object.entries(COUNTRIES).forEach(([code, names]) => {
-      const option = makeElement('option', '', `${flags[code] || ''} ${names[language]}`);
+      const option = makeElement('option', '', names[language]);
       option.value = code;
       holidaySelect.appendChild(option);
     });
@@ -353,8 +363,9 @@
       name.dataset.employeeId = employee.id;
       name.setAttribute('aria-label', `${t('employees')}: ${employee.name}`);
       name.addEventListener('input', onEmployeeNameInput);
-      const remove = makeElement('button', 'emp-remove', '✕');
-      remove.type = 'button';
+       const remove = makeElement('button', 'emp-remove');
+       remove.type = 'button';
+       remove.appendChild(createIcon('trash'));
       remove.dataset.employeeId = employee.id;
       remove.title = t('removeTitle');
       remove.setAttribute('aria-label', `${t('removeTitle')}: ${employee.name}`);
@@ -464,9 +475,10 @@
     }
     yearPopup.appendChild(makeElement('hr'));
     const currentYear = new Date().getFullYear();
-    const currentTile = makeElement('button', `year-tile${currentYear === state.year ? ' selected' : ''}`, `📍 ${currentYear}`);
+    const currentTile = makeElement('button', `year-tile${currentYear === state.year ? ' selected' : ''}`);
     currentTile.type = 'button';
     currentTile.style.gridColumn = '1 / -1';
+    currentTile.append(createIcon('pin'), document.createTextNode(String(currentYear)));
     currentTile.title = t('today');
     currentTile.addEventListener('click', event => {
       event.stopPropagation();
@@ -491,7 +503,7 @@
   function onEditToggle() {
     if (!editToggle.checked) flushVisibleEdits();
     state.editMode = editToggle.checked;
-    editControls.style.display = state.editMode ? 'block' : 'none';
+    editControls.classList.toggle('is-visible', state.editMode);
     render(false);
     saveState();
   }
@@ -656,7 +668,7 @@
     });
 
     editToggle.checked = state.editMode;
-    editControls.style.display = state.editMode ? 'block' : 'none';
+    editControls.classList.toggle('is-visible', state.editMode);
     applyLanguage(state.lang);
     applyTheme();
     computeHolidays();
