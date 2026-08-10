@@ -1,8 +1,8 @@
 # TimeSheetLite
 
-Simple, local attendance sheet generator for printing or saving as PDF.
+Simple attendance sheet generator for printing or saving as PDF. Everything is kept locally in your browser.
 
-Open the application at [TimeSheetLite](https://shurielx.github.io/TimeSheetLite/) or download the repository and open `index.html` in a current browser.
+**[Open TimeSheetLite](https://shurielx.github.io/TimeSheetLite/)** · [View the repository](https://github.com/Shurielx/TimeSheetLite) · [Download the latest Windows ZIP](https://github.com/Shurielx/TimeSheetLite/releases/latest)
 
 ## What you can do
 
@@ -23,9 +23,13 @@ Open the application at [TimeSheetLite](https://shurielx.github.io/TimeSheetLite
 
 Entries are saved only in the browser on the current device. Export a JSON backup before clearing browser data or moving to another computer.
 
+## Windows download
+
+Download `TimeSheetLite-windows.zip` from the latest release, unpack it, and start `Start-TimeSheetLite.cmd`. The launcher checks GitHub for a newer release before opening the app and updates the unpacked folder automatically. You can also open `index.html` directly in a current browser, but that does not run the updater.
+
 ## Privacy
 
-Data and backups are not encrypted. Use the app on a trusted device and keep backups private. When a country other than Poland is selected, only the year and country code are sent to Nager.Date to download public holidays.
+Your data and JSON backups are not encrypted, so use the app on a trusted device and keep backups private. If you select a country other than Poland, the app sends only the selected year and country code to [Nager.Date](https://date.nager.at/) to load public holidays. Attendance data is not sent.
 
 Read [Privacy](PRIVACY.md) before using the app with personal data.
 
