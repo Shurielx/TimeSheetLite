@@ -589,6 +589,9 @@ thead th {
   text-align: center;
   vertical-align: middle;
   background: var(--bg-sheet-page);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 thead th.employee-name {
@@ -598,6 +601,30 @@ thead th.employee-name {
 thead th.sub-header {
   font-weight: 600;
   font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+thead th.cell-hours,
+tbody td.cell-hours {
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+thead th.cell-hours {
+  font-size: 0.65rem;
+}
+
+tbody td.cell-hours {
+  font-size: 0.7rem;
+}
+
+thead th.cell-status,
+tbody td.cell-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Corner cell spanning the "Dzień" label */
@@ -655,14 +682,18 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
 
 .table-input {
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   border: 0;
+  box-sizing: border-box;
   background: transparent;
   color: inherit;
   font: inherit;
   text-align: center;
   outline: 2px solid transparent;
   outline-offset: -2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-input:focus {
@@ -671,7 +702,15 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
-.hours-input { font-variant-numeric: tabular-nums; }
+.cell-hours .table-input {
+  font-size: 0.65rem;
+  padding: 0 1px;
+}
+
+.hours-input {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+}
 
 
 

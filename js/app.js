@@ -651,6 +651,9 @@
       thead th { font-weight: 700; font-size: 0.75rem; }
       thead th.employee-name { font-size: 0.85rem; }
       thead th.sub-header { font-weight: 600; font-size: 0.7rem; }
+      thead th.cell-hours, tbody td.cell-hours { padding-left: 1px; padding-right: 1px; }
+      thead th.cell-hours { font-size: 0.65rem; }
+      tbody td.cell-hours { font-size: 0.7rem; }
       thead th.corner-cell { width: 2.8rem; }
       tbody td { font-size: 0.75rem; }
       tbody td:first-child { font-weight: 700; width: 2.8rem; }

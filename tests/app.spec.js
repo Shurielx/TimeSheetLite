@@ -135,3 +135,21 @@ test('adjusts column proportions according to column width preset on screen and 
   expect(printStatusBox.width).toBeGreaterThan(printHoursBox.width * 5);
   await printPage.close();
 });
+
+test('keeps header text and input contained within narrow hours columns without overflowing', async ({ page }) => {
+  await page.locator('#column-width-preset').selectOption('preset-90-10');
+  const hoursHeader = page.locator('th.cell-hours').first();
+  const box = await hoursHeader.boundingBox();
+  expect(box.width).toBeGreaterThan(0);
+  const overflow = await hoursHeader.evaluate(el => {
+    const style = window.getComputedStyle(el);
+    return {
+      overflow: style.overflow,
+      textOverflow: style.textOverflow,
+      whiteSpace: style.whiteSpace,
+    };
+  });
+  expect(overflow.overflow).toBe('hidden');
+  expect(overflow.textOverflow).toBe('ellipsis');
+  expect(overflow.whiteSpace).toBe('nowrap');
+});
