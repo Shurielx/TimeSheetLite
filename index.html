@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://date.nager.at; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none';">
-<title data-i18n="pageTitle">TimeSheetLite — Attendance Generator v1.0 - Re-Release</title>
+<title data-i18n="pageTitle">TimeSheetLite — Attendance Generator v1.1</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -52,7 +52,7 @@
 <div id="app">
   <!-- UI Panel -->
   <aside id="ui-panel">
-    <h1><svg class="icon icon-brand" aria-hidden="true" focusable="false"><use href="#icon-brand"></use></svg><span data-i18n="title">Attendance Generator</span> <span class="app-version" data-i18n="version">v1.0 - Re-Release</span></h1>
+    <h1><svg class="icon icon-brand" aria-hidden="true" focusable="false"><use href="#icon-brand"></use></svg><span data-i18n="title">Attendance Generator</span> <span class="app-version" data-i18n="version">v1.1</span></h1>
 
     <div class="control-group">
       <label for="month-select" data-i18n="monthYear">Month and year</label>
@@ -192,6 +192,9 @@
   <main id="sheet-container">
     <div class="sheet-page">
         <table id="attendance-table" aria-label="Attendance table">
+        <colgroup id="table-colgroup">
+          <!-- Dynamically built -->
+        </colgroup>
         <thead id="table-head">
           <!-- Dynamically built -->
         </thead>

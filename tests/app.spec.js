@@ -113,3 +113,25 @@ for (const layout of ['portrait', 'landscape']) {
     expect(size.height).toBeGreaterThanOrEqual(expected.height - 1);
   });
 }
+
+test('adjusts column proportions according to column width preset on screen and in print', async ({ page }) => {
+  await page.locator('#column-width-preset').selectOption('preset-90-10');
+  const statusHeader = page.locator('th.cell-status').first();
+  const hoursHeader = page.locator('th.cell-hours').first();
+  
+  const statusBox = await statusHeader.boundingBox();
+  const hoursBox = await hoursHeader.boundingBox();
+  expect(statusBox.width).toBeGreaterThan(hoursBox.width * 5);
+
+  const popupPromise = page.waitForEvent('popup');
+  await page.locator('#print-btn').click();
+  const printPage = await popupPromise;
+  await printPage.waitForLoadState('domcontentloaded');
+
+  const printStatusHeader = printPage.locator('th.cell-status').first();
+  const printHoursHeader = printPage.locator('th.cell-hours').first();
+  const printStatusBox = await printStatusHeader.boundingBox();
+  const printHoursBox = await printHoursHeader.boundingBox();
+  expect(printStatusBox.width).toBeGreaterThan(printHoursBox.width * 5);
+  await printPage.close();
+});

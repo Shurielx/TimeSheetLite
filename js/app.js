@@ -64,6 +64,7 @@
   const openDataFileBtn = document.getElementById('open-data-file-btn');
   const createDataFileBtn = document.getElementById('create-data-file-btn');
   const sheetPage = document.querySelector('.sheet-page');
+  const tableColgroup = document.getElementById('table-colgroup');
   const tableHead = document.getElementById('table-head');
   const tableBody = document.getElementById('table-body');
   const table = document.getElementById('attendance-table');
@@ -255,35 +256,26 @@
     const hoursWidth = `${hoursRatio / employeeCount}%`;
 
     if (!state.monthLabel.trim()) monthLabelInput.value = label;
+    if (tableColgroup) {
+      tableColgroup.replaceChildren();
+      const cornerCol = document.createElement('col');
+      cornerCol.style.width = '2.8rem';
+      tableColgroup.appendChild(cornerCol);
+      employees.forEach(() => {
+        const statusCol = document.createElement('col');
+        statusCol.style.width = statusWidth;
+        const hoursCol = document.createElement('col');
+        hoursCol.style.width = hoursWidth;
+        tableColgroup.append(statusCol, hoursCol);
+      });
+    }
+
     tableHead.replaceChildren();
     const mainRow = makeElement('tr');
     const mainHeader = makeElement('th', 'main-header', label);
     mainHeader.colSpan = 1 + employees.length * 2;
     mainRow.appendChild(mainHeader);
     tableHead.appendChild(mainRow);
-
-    const employeeRow = makeElement('tr');
-    employeeRow.appendChild(makeElement('th', 'corner-cell', t('day')));
-    employees.forEach(employee => {
-      const header = makeElement('th', 'employee-name');
-      header.colSpan = 2;
-      header.dataset.employeeId = employee.id;
-      header.setAttribute('aria-label', `${t('employees')}: ${employee.name}`);
-      header.style.width = `${100 / employeeCount}%`;
-      if (state.editMode) {
-        const input = document.createElement('input');
-        input.className = 'table-input employee-name-input';
-        input.value = employee.name;
-        input.maxLength = 100;
-        input.dataset.employeeId = employee.id;
-        input.setAttribute('aria-label', `${t('employees')}: ${employee.name}`);
-        header.appendChild(input);
-      } else {
-        header.textContent = employee.name;
-      }
-      employeeRow.appendChild(header);
-    });
-    tableHead.appendChild(employeeRow);
 
     const subHeaderRow = makeElement('tr');
     subHeaderRow.appendChild(makeElement('th', 'corner-cell'));
@@ -303,7 +295,28 @@
       }
       subHeaderRow.append(statusHeader, hoursHeader);
     });
-    tableHead.appendChild(subHeaderRow);
+
+    const employeeRow = makeElement('tr');
+    employeeRow.appendChild(makeElement('th', 'corner-cell', t('day')));
+    employees.forEach(employee => {
+      const header = makeElement('th', 'employee-name');
+      header.colSpan = 2;
+      header.dataset.employeeId = employee.id;
+      header.setAttribute('aria-label', `${t('employees')}: ${employee.name}`);
+      if (state.editMode) {
+        const input = document.createElement('input');
+        input.className = 'table-input employee-name-input';
+        input.value = employee.name;
+        input.maxLength = 100;
+        input.dataset.employeeId = employee.id;
+        input.setAttribute('aria-label', `${t('employees')}: ${employee.name}`);
+        header.appendChild(input);
+      } else {
+        header.textContent = employee.name;
+      }
+      employeeRow.appendChild(header);
+    });
+    tableHead.append(employeeRow, subHeaderRow);
 
     tableBody.replaceChildren();
     for (let day = 1; day <= days; day += 1) {
@@ -638,8 +651,9 @@
       thead th { font-weight: 700; font-size: 0.75rem; }
       thead th.employee-name { font-size: 0.85rem; }
       thead th.sub-header { font-weight: 600; font-size: 0.7rem; }
+      thead th.corner-cell { width: 2.8rem; }
       tbody td { font-size: 0.75rem; }
-      tbody td:first-child { font-weight: 700; }
+      tbody td:first-child { font-weight: 700; width: 2.8rem; }
       .special-day { background: #e0e0e0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .sheet-page.portrait tbody tr td { height: 4mm; font-size: 10px; padding: 1px 3px; }
       .sheet-page.landscape tbody tr td { height: 4.8mm; font-size: 11px; padding: 2px 4px; }

@@ -564,6 +564,7 @@ html.dark-mode .btn-print:hover {
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 0.8rem;
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
 }
@@ -592,7 +593,6 @@ thead th {
 
 thead th.employee-name {
   font-size: 0.85rem;
-  min-width: 5rem;
 }
 
 thead th.sub-header {
@@ -607,6 +607,7 @@ thead th.corner-cell {
   font-size: 0.75rem;
   text-align: center;
   vertical-align: middle;
+  width: 2.8rem;
 }
 
 /* Body cells */
@@ -620,7 +621,7 @@ tbody td {
 
 tbody td:first-child {
   font-weight: 700;
-  min-width: 2.8rem;
+  width: 2.8rem;
   cursor: default;
 }
 

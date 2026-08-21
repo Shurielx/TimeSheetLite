@@ -1,6 +1,6 @@
 {
   "name": "timesheetlite",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "check": "node --check js/app.js && node --check js/storage.js && node --check js/holidays.js && node --check js/i18n.js",

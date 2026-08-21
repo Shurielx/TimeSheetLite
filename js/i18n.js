@@ -13,9 +13,9 @@
 
   const I18N = {
      pl: {
-       pageTitle: 'TimeSheetLite — Generator listy obecności v1.0 - Re-Release',
-       title: 'Generator listy obecności',
-       version: 'v1.0 - Re-Release',
+      pageTitle: 'TimeSheetLite — Generator listy obecności v1.1',
+      title: 'Generator listy obecności',
+      version: 'v1.1',
       monthYear: 'Miesiąc i rok',
       monthLabel: 'Nazwa miesiąca (opcjonalnie)',
       monthPlaceholder: 'np. LIPIEC 2026',
@@ -94,9 +94,9 @@
        invalidJson: 'Plik nie zawiera prawidłowego formatu JSON.',
      },
      en: {
-       pageTitle: 'TimeSheetLite — Attendance Generator v1.0 - Re-Release',
-       title: 'Attendance Generator',
-       version: 'v1.0 - Re-Release',
+      pageTitle: 'TimeSheetLite — Attendance Generator v1.1',
+      title: 'Attendance Generator',
+      version: 'v1.1',
       monthYear: 'Month and year',
       monthLabel: 'Month label (optional)',
       monthPlaceholder: 'e.g. JULY 2026',
