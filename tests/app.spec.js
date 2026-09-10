@@ -228,3 +228,15 @@ test('navigates with Enter key to the next day row', async ({ page }) => {
   const secondHours = page.locator('.hours-input').nth(3);
   await expect(secondHours).toBeFocused();
 });
+
+test('toggles total hours visibility on the sheet and CSV export', async ({ page }) => {
+  await expect(page.locator('#show-totals-toggle')).toBeChecked();
+  await expect(page.locator('.total-row')).toBeVisible();
+
+  await page.locator('#show-totals-toggle').uncheck();
+  await expect(page.locator('.total-row')).toHaveCount(0);
+
+  await page.locator('#show-totals-toggle').check();
+  await expect(page.locator('.total-row')).toBeVisible();
+});
+

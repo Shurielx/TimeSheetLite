@@ -32,6 +32,7 @@
     lang: detectBrowserLanguage(),
     holidayCountry: 'PL',
     editMode: false,
+    showTotals: true,
     darkMode: false,
     darkSheet: false,
     colStatusName: '',
@@ -46,6 +47,7 @@
   const yearPopup = document.getElementById('year-popup');
   const monthLabelInput = document.getElementById('month-label');
   const editToggle = document.getElementById('edit-toggle');
+  const showTotalsToggle = document.getElementById('show-totals-toggle');
   const editControls = document.getElementById('edit-controls');
   const employeeList = document.getElementById('employee-list');
   const addEmployeeBtn = document.getElementById('add-employee-btn');
@@ -274,6 +276,8 @@
   function renderFoot(statusWidth, hoursWidth) {
     if (!tableFoot) return;
     tableFoot.replaceChildren();
+    if (!state.showTotals) return;
+
     const row = makeElement('tr', 'total-row');
     const labelCell = makeElement('th', 'total-label-cell', t('total'));
     labelCell.setAttribute('scope', 'row');
@@ -296,7 +300,7 @@
   }
 
   function updateTotalsUI() {
-    if (!tableFoot) return;
+    if (!tableFoot || !state.showTotals) return;
     const totals = calculateEmployeeTotals();
     tableFoot.querySelectorAll('.total-hours-value').forEach(cell => {
       const empId = cell.dataset.employeeId;
@@ -853,6 +857,7 @@
       langSelect.value = state.lang;
       holidaySelect.value = state.holidayCountry;
       darkToggle.checked = state.darkMode;
+      if (showTotalsToggle) showTotalsToggle.checked = state.showTotals;
       darkSheetToggle.checked = state.darkSheet;
       columnWidthPreset.value = state.colWidthPreset;
       pageLayoutSelect.value = state.pageLayout;
@@ -871,6 +876,7 @@
     langSelect.value = state.lang;
     holidaySelect.value = state.holidayCountry;
     darkToggle.checked = state.darkMode;
+    if (showTotalsToggle) showTotalsToggle.checked = state.showTotals;
     darkSheetToggle.checked = state.darkSheet;
     columnWidthPreset.value = state.colWidthPreset;
     pageLayoutSelect.value = state.pageLayout;
@@ -971,13 +977,15 @@
       lines.push(row.join(sep));
     }
 
-    const totalRow = [`"${t('total')}"`];
-    state.employees.forEach(emp => {
-      totalRow.push('""');
-      const total = totals[emp.id] || 0;
-      totalRow.push(`"${formatHoursNumber(total)}"`);
-    });
-    lines.push(totalRow.join(sep));
+    if (state.showTotals) {
+      const totalRow = [`"${t('total')}"`];
+      state.employees.forEach(emp => {
+        totalRow.push('""');
+        const total = totals[emp.id] || 0;
+        totalRow.push(`"${formatHoursNumber(total)}"`);
+      });
+      lines.push(totalRow.join(sep));
+    }
 
     const csvContent = '\uFEFF' + lines.join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1066,6 +1074,7 @@
     langSelect.value = state.lang;
     holidaySelect.value = state.holidayCountry;
     darkToggle.checked = state.darkMode;
+    if (showTotalsToggle) showTotalsToggle.checked = state.showTotals;
     darkSheetToggle.checked = state.darkSheet;
     columnWidthPreset.value = state.colWidthPreset;
     pageLayoutSelect.value = state.pageLayout;
@@ -1133,6 +1142,13 @@
       state.holidayCountry = holidaySelect.value;
       computeHolidays();
       render(false);
+      saveState();
+    });
+    showTotalsToggle.addEventListener('change', () => {
+      flushVisibleEdits();
+      state.showTotals = showTotalsToggle.checked;
+      renderFoot(`${50 / (state.employees.length || 1)}%`, `${50 / (state.employees.length || 1)}%`);
+      render(false, true);
       saveState();
     });
     darkToggle.addEventListener('change', () => {

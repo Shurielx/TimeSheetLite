@@ -13,9 +13,9 @@
 
   const I18N = {
      pl: {
-      pageTitle: 'TimeSheetLite — Generator listy obecności v1.2.0',
+      pageTitle: 'TimeSheetLite — Generator listy obecności v1.2.1',
       title: 'Generator listy obecności',
-      version: 'v1.2.0',
+      version: 'v1.2.1',
       monthYear: 'Miesiąc i rok',
       monthLabel: 'Nazwa miesiąca (opcjonalnie)',
       monthPlaceholder: 'np. LIPIEC 2026',
@@ -93,6 +93,7 @@
        fileReadFailed: 'Nie udało się odczytać pliku kopii.',
        invalidJson: 'Plik nie zawiera prawidłowego formatu JSON.',
        total: 'RAZEM',
+       showTotals: 'Pokaż sumę godzin',
        exportCsv: 'Eksportuj CSV',
        fillWorkdays: 'Wypełnij dni robocze (8h)',
        fillWorkdaysDesc: 'Wpisz 8h dla wszystkich dni roboczych',
@@ -104,9 +105,9 @@
        preset2080: '20% podpis / 80% godziny',
      },
      en: {
-      pageTitle: 'TimeSheetLite — Attendance Generator v1.2.0',
+      pageTitle: 'TimeSheetLite — Attendance Generator v1.2.1',
       title: 'Attendance Generator',
-      version: 'v1.2.0',
+      version: 'v1.2.1',
       monthYear: 'Month and year',
       monthLabel: 'Month label (optional)',
       monthPlaceholder: 'e.g. JULY 2026',
@@ -184,6 +185,7 @@
        fileReadFailed: 'Could not read the backup file.',
        invalidJson: 'The file does not contain valid JSON.',
        total: 'TOTAL',
+       showTotals: 'Show total hours',
        exportCsv: 'Export CSV',
        fillWorkdays: 'Fill working days (8h)',
        fillWorkdaysDesc: 'Fill 8h for all working days',

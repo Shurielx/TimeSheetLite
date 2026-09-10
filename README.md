@@ -1,10 +1,10 @@
-# TimeSheetLite v1.2.0
+# TimeSheetLite v1.2.1
 
 Simple attendance sheet generator for printing or saving as PDF. Everything is kept locally in your browser.
 
 **[Open TimeSheetLite](https://shurielx.github.io/TimeSheetLite/)** · [View the repository](https://github.com/Shurielx/TimeSheetLite)
 
-Current release: **v1.2.0**. Created by [Shuriel](https://github.com/Shurielx). [Report an issue](https://github.com/Shurielx/TimeSheetLite/issues/new) or [suggest something](https://github.com/Shurielx/TimeSheetLite/issues/new).
+Current release: **v1.2.1**. Created by [Shuriel](https://github.com/Shurielx). [Report an issue](https://github.com/Shurielx/TimeSheetLite/issues/new) or [suggest something](https://github.com/Shurielx/TimeSheetLite/issues/new).
 
 ## What you can do
 
@@ -13,6 +13,7 @@ Current release: **v1.2.0**. Created by [Shuriel](https://github.com/Shurielx). 
 - enter status and hours for each day with Excel-like keyboard navigation (Enter/arrows);
 - click any table cell to immediately begin editing;
 - one-click fill standard working days with 8 hours;
+- toggle monthly total hours row on/off with live preview, print and CSV synchronization;
 - automatic monthly total hours calculation for each employee;
 - mark non-working days and Polish public holidays (including All Saints' Day, Christmas Eve from 2025);
 - print on A4 in portrait or landscape, or save as PDF;
