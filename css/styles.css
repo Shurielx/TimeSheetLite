@@ -286,7 +286,21 @@ details[open] .settings-summary .icon { transform: rotate(12deg); }
 .data-file-actions .backup-button { min-width: 0; }
 .reset-actions { margin-top: 0.4rem; }
 .reset-button { width: 100%; font-size: 0.75rem; padding: 0.4rem 0.5rem; }
-.print-actions { margin-top: auto; padding-top: 0.5rem; border-top: 2px solid var(--border-light); }
+.print-actions {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 2px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.btn-csv {
+  width: 100%;
+  justify-content: center;
+  padding: 0.55rem;
+  font-size: 0.9rem;
+}
 .is-hidden { display: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .field-status { min-height: 1.1em; font-size: 0.75rem; color: var(--text-label); }
@@ -357,6 +371,40 @@ details[open] .settings-summary .icon { transform: rotate(12deg); }
 
 .year-popup.open {
   display: grid;
+}
+
+.year-popup-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.year-nav-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.year-nav-btn:hover {
+  background: var(--bg-year-hover);
+  border-color: var(--border-focus);
+}
+
+.year-range-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-label);
 }
 
 .year-tile {
@@ -712,6 +760,56 @@ tbody td:first-child:hover { background: var(--bg-hover-td); }
   font-size: 0.7rem;
 }
 
+.table-input.is-invalid {
+  outline: 2px solid #ef4444 !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.28) !important;
+}
+
+/* Table Footer / Summary row */
+tfoot {
+  border-top: 2px solid var(--border-table);
+}
+
+.total-row {
+  background: var(--bg-sheet-page);
+}
+
+.total-label-cell {
+  border: 1px solid var(--border-table);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 0.35rem 0.25rem;
+  letter-spacing: 0.03em;
+  background: var(--bg-sheet-page);
+  width: 2.8rem;
+}
+
+.total-cell {
+  border: 1px solid var(--border-table);
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.3rem 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--bg-sheet-page);
+}
+
+.total-hours-value {
+  font-weight: 800;
+  color: var(--accent-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+html.dark-mode.dark-sheet .total-hours-value {
+  color: var(--accent);
+}
+
+html.dark-mode:not(.dark-sheet) .total-hours-value {
+  color: #1e1e2e;
+}
+
 
 
 /* Dev settings */
@@ -933,6 +1031,25 @@ details.is-closing .dev-settings {
     height: 4.8mm !important;
     font-size: 11px;
     padding: 2px 4px;
+  }
+
+  #sheet-container .sheet-page.portrait table tfoot tr td,
+  #sheet-container .sheet-page.portrait table tfoot tr th {
+    height: 4.0mm !important;
+    font-size: 10px;
+    padding: 1px 3px;
+  }
+
+  #sheet-container .sheet-page.landscape table tfoot tr td,
+  #sheet-container .sheet-page.landscape table tfoot tr th {
+    height: 4.8mm !important;
+    font-size: 11px;
+    padding: 2px 4px;
+  }
+
+  #sheet-container .total-hours-value {
+    color: black !important;
+    font-weight: 800 !important;
   }
 
   /* 6. Dark mode override na wydruku – zawsze jasny arkusz */

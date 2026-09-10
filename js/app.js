@@ -67,10 +67,16 @@
   const tableColgroup = document.getElementById('table-colgroup');
   const tableHead = document.getElementById('table-head');
   const tableBody = document.getElementById('table-body');
+  const tableFoot = document.getElementById('table-foot');
   const table = document.getElementById('attendance-table');
+  const fillWorkdaysBtn = document.getElementById('fill-workdays-btn');
+  const clearMonthBtn = document.getElementById('clear-month-btn');
+  const exportCsvBtn = document.getElementById('export-csv-btn');
   const printOrientationStyle = document.getElementById('print-orientation');
   const storage = window.TimeSheetStorage.create(state);
   const MAX_PRINT_EMPLOYEES = 8;
+
+  let yearPickerBase = state.year;
 
   let holidayRequestId = 0;
   let holidayAbortController = null;
@@ -240,6 +246,65 @@
     printOrientationStyle.textContent = `@page { size: A4 ${state.pageLayout}; margin: 6mm; }`;
   }
 
+  function calculateEmployeeTotals() {
+    const days = daysInMonth(state.month, state.year);
+    const totals = {};
+    state.employees.forEach(employee => {
+      let sum = 0;
+      for (let day = 1; day <= days; day += 1) {
+        const key = `${dateKey(state.year, state.month, day)}:${employee.id}`;
+        const hours = state.data[key]?.hours;
+        if (hours) {
+          const num = parseFloat(hours.replace(',', '.'));
+          if (!isNaN(num)) sum += num;
+        }
+      }
+      totals[employee.id] = Math.round(sum * 100) / 100;
+    });
+    return totals;
+  }
+
+  function formatHoursNumber(num) {
+    if (!num || num === 0) return '0';
+    const rounded = Math.round(num * 100) / 100;
+    const str = rounded % 1 === 0 ? String(rounded) : rounded.toFixed(2).replace(/\.?0+$/, '');
+    return state.lang === 'pl' ? str.replace('.', ',') : str;
+  }
+
+  function renderFoot(statusWidth, hoursWidth) {
+    if (!tableFoot) return;
+    tableFoot.replaceChildren();
+    const row = makeElement('tr', 'total-row');
+    const labelCell = makeElement('th', 'total-label-cell', t('total'));
+    labelCell.setAttribute('scope', 'row');
+    row.appendChild(labelCell);
+
+    const totals = calculateEmployeeTotals();
+    state.employees.forEach(employee => {
+      const statusCell = makeElement('td', 'cell-status total-cell');
+      statusCell.style.width = statusWidth;
+
+      const hoursCell = makeElement('td', 'cell-hours total-cell total-hours-value');
+      hoursCell.style.width = hoursWidth;
+      hoursCell.dataset.employeeId = employee.id;
+      const total = totals[employee.id] || 0;
+      hoursCell.textContent = formatHoursNumber(total);
+      hoursCell.setAttribute('aria-label', `${employee.name}: ${t('total')} ${hoursCell.textContent} ${t('hours')}`);
+      row.append(statusCell, hoursCell);
+    });
+    tableFoot.appendChild(row);
+  }
+
+  function updateTotalsUI() {
+    if (!tableFoot) return;
+    const totals = calculateEmployeeTotals();
+    tableFoot.querySelectorAll('.total-hours-value').forEach(cell => {
+      const empId = cell.dataset.employeeId;
+      const total = totals[empId] || 0;
+      cell.textContent = formatHoursNumber(total);
+    });
+  }
+
   function render(syncEdits = false, animate = false) {
     if (syncEdits) flushVisibleEdits();
 
@@ -255,7 +320,10 @@
     const statusWidth = `${statusRatio / employeeCount}%`;
     const hoursWidth = `${hoursRatio / employeeCount}%`;
 
-    if (!state.monthLabel.trim()) monthLabelInput.value = label;
+    monthLabelInput.placeholder = generateMonthLabel();
+    if (document.activeElement !== monthLabelInput) {
+      monthLabelInput.value = state.monthLabel;
+    }
     if (tableColgroup) {
       tableColgroup.replaceChildren();
       const cornerCol = document.createElement('col');
@@ -388,6 +456,8 @@
       tableBody.appendChild(row);
     }
 
+    renderFoot(statusWidth, hoursWidth);
+
     sheetPage.className = `sheet-page ${state.pageLayout === 'landscape' ? 'landscape' : 'portrait'}`;
     table.classList.toggle('edit-mode', state.editMode);
     updateEmployeeListUI();
@@ -477,7 +547,14 @@
     const input = event.target;
     if (input.matches('.employee-name-input')) {
       const employee = state.employees.find(item => item.id === input.dataset.employeeId);
-      if (employee) employee.name = singleLine(input.value, 100) || employee.name;
+      if (employee) {
+        employee.name = singleLine(input.value, 100) || employee.name;
+        const sidebarInput = employeeList.querySelector(`.emp-name[data-employee-id="${input.dataset.employeeId}"]`);
+        if (sidebarInput && sidebarInput.value !== input.value) {
+          sidebarInput.value = input.value;
+        }
+        input.closest('th')?.setAttribute('aria-label', `${t('employees')}: ${input.value}`);
+      }
     } else if (input.matches('.column-header-input')) {
       state[input.dataset.field] = singleLine(input.value, 100);
       document.querySelectorAll(`.column-header-input[data-field="${input.dataset.field}"]`).forEach(other => {
@@ -489,16 +566,22 @@
       state.dayLabels[input.dataset.date] = singleLine(input.value, 30);
     } else if (input.matches('.cell-input')) {
       const value = singleLine(input.value, input.dataset.field === 'hours' ? 5 : 30);
-      if (input.dataset.field === 'hours' && !isValidHours(value)) {
-        input.setCustomValidity(t('invalidHours'));
-        return;
+      if (input.dataset.field === 'hours') {
+        const valid = isValidHours(value);
+        input.classList.toggle('is-invalid', !valid);
+        input.title = valid ? '' : t('invalidHours');
+        if (!valid) {
+          input.setCustomValidity(t('invalidHours'));
+          return;
+        }
+        input.setCustomValidity('');
       }
-      input.setCustomValidity('');
       const key = `${input.dataset.date}:${input.dataset.employeeId}`;
       const cell = state.data[key] || {};
       cell[input.dataset.field] = value;
       if (cell.status || cell.hours) state.data[key] = cell;
       else delete state.data[key];
+      if (input.dataset.field === 'hours') updateTotalsUI();
     } else {
       return;
     }
@@ -506,9 +589,20 @@
   }
 
   function onEmployeeNameInput(event) {
-    const employee = state.employees.find(item => item.id === event.target.dataset.employeeId);
+    const employeeId = event.target.dataset.employeeId;
+    const employee = state.employees.find(item => item.id === employeeId);
     if (!employee) return;
     employee.name = singleLine(event.target.value, 100) || employee.name;
+    const tableHeader = tableHead.querySelector(`th.employee-name[data-employee-id="${employeeId}"]`);
+    if (tableHeader) {
+      const tableInput = tableHeader.querySelector('.employee-name-input');
+      if (tableInput && tableInput.value !== event.target.value) {
+        tableInput.value = event.target.value;
+      } else if (!tableInput) {
+        tableHeader.textContent = event.target.value;
+      }
+      tableHeader.setAttribute('aria-label', `${t('employees')}: ${event.target.value}`);
+    }
     scheduleSave();
   }
 
@@ -540,7 +634,31 @@
 
   function renderYearPicker() {
     yearPopup.replaceChildren();
-    for (let year = state.year - 1; year <= state.year + 3; year += 1) {
+
+    const header = makeElement('div', 'year-popup-header');
+    const prevBtn = makeElement('button', 'year-nav-btn', '‹');
+    prevBtn.type = 'button';
+    prevBtn.setAttribute('aria-label', 'Previous years');
+    prevBtn.addEventListener('click', event => {
+      event.stopPropagation();
+      yearPickerBase -= 6;
+      renderYearPicker();
+    });
+
+    const rangeLabel = makeElement('span', 'year-range-label', `${yearPickerBase - 2} – ${yearPickerBase + 3}`);
+
+    const nextBtn = makeElement('button', 'year-nav-btn', '›');
+    nextBtn.type = 'button';
+    nextBtn.setAttribute('aria-label', 'Next years');
+    nextBtn.addEventListener('click', event => {
+      event.stopPropagation();
+      yearPickerBase += 6;
+      renderYearPicker();
+    });
+    header.append(prevBtn, rangeLabel, nextBtn);
+    yearPopup.appendChild(header);
+
+    for (let year = yearPickerBase - 2; year <= yearPickerBase + 3; year += 1) {
       const tile = makeElement('button', `year-tile${year === state.year ? ' selected' : ''}`, year);
       tile.type = 'button';
       tile.addEventListener('click', event => {
@@ -558,6 +676,7 @@
     currentTile.title = t('today');
     currentTile.addEventListener('click', event => {
       event.stopPropagation();
+      yearPickerBase = currentYear;
       selectYear(currentYear);
     });
     yearPopup.appendChild(currentTile);
@@ -601,9 +720,14 @@
   }
 
   function openPrintPreview() {
-    const printWindow = window.open('', '_blank');
+    let printWindow = null;
+    try {
+      printWindow = window.open('', '_blank');
+    } catch (error) {
+      printWindow = null;
+    }
     if (!printWindow) {
-      window.alert(t('printPopupBlocked'));
+      window.print();
       return;
     }
 
@@ -660,6 +784,16 @@
       .special-day { background: #e0e0e0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .sheet-page.portrait tbody tr td { height: 4mm; font-size: 10px; padding: 1px 3px; }
       .sheet-page.landscape tbody tr td { height: 4.8mm; font-size: 11px; padding: 2px 4px; }
+      tfoot th, tfoot td {
+        border: 1px solid #000;
+        padding: 3px 4px;
+        text-align: center;
+        vertical-align: middle;
+        font-weight: 700;
+      }
+      .total-hours-value { font-weight: 800; }
+      .sheet-page.portrait tfoot tr td, .sheet-page.portrait tfoot tr th { height: 4mm; font-size: 10px; padding: 1px 3px; }
+      .sheet-page.landscape tfoot tr td, .sheet-page.landscape tfoot tr th { height: 4.8mm; font-size: 11px; padding: 2px 4px; }
     `;
     printDocument.head.appendChild(style);
 
@@ -769,6 +903,160 @@
     if (window.confirm(t('resetDefaults') + '?')) storage.reset();
   }
 
+  function fillWorkingDays() {
+    flushVisibleEdits();
+    const days = daysInMonth(state.month, state.year);
+    state.employees.forEach(employee => {
+      for (let day = 1; day <= days; day += 1) {
+        if (!isSpecialDay(state.year, state.month, day)) {
+          const key = `${dateKey(state.year, state.month, day)}:${employee.id}`;
+          const current = state.data[key] || {};
+          state.data[key] = {
+            status: current.status || '',
+            hours: '8',
+          };
+        }
+      }
+    });
+    render(false, true);
+    saveState();
+  }
+
+  function clearMonth() {
+    if (!window.confirm(t('clearMonthConfirm'))) return;
+    flushVisibleEdits();
+    const days = daysInMonth(state.month, state.year);
+    state.employees.forEach(employee => {
+      for (let day = 1; day <= days; day += 1) {
+        const key = `${dateKey(state.year, state.month, day)}:${employee.id}`;
+        delete state.data[key];
+      }
+    });
+    render(false, true);
+    saveState();
+  }
+
+  function exportToCsv() {
+    flushVisibleEdits();
+    saveState();
+    const days = daysInMonth(state.month, state.year);
+    const statusLabel = state.colStatusName.trim() || t('status');
+    const hoursLabel = state.colHoursName.trim() || t('hours');
+    const sep = ';';
+    const lines = [];
+
+    const title = state.monthLabel.trim() || generateMonthLabel();
+    lines.push(`"${title.replace(/"/g, '""')}"`);
+    lines.push('');
+
+    const headers = [`"${t('day')}"`];
+    state.employees.forEach(emp => {
+      headers.push(`"${emp.name.replace(/"/g, '""')} - ${statusLabel}"`);
+      headers.push(`"${emp.name.replace(/"/g, '""')} - ${hoursLabel}"`);
+    });
+    lines.push(headers.join(sep));
+
+    const totals = calculateEmployeeTotals();
+
+    for (let day = 1; day <= days; day += 1) {
+      const key = dateKey(state.year, state.month, day);
+      const dayLabel = state.dayLabels[key] || String(day);
+      const special = isSpecialDay(state.year, state.month, day);
+      const row = [`"${dayLabel}${special ? ' *' : ''}"`];
+      state.employees.forEach(emp => {
+        const cell = state.data[`${key}:${emp.id}`] || {};
+        row.push(`"${(cell.status || '').replace(/"/g, '""')}"`);
+        row.push(`"${(cell.hours || '').replace(/"/g, '""')}"`);
+      });
+      lines.push(row.join(sep));
+    }
+
+    const totalRow = [`"${t('total')}"`];
+    state.employees.forEach(emp => {
+      totalRow.push('""');
+      const total = totals[emp.id] || 0;
+      totalRow.push(`"${formatHoursNumber(total)}"`);
+    });
+    lines.push(totalRow.join(sep));
+
+    const csvContent = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `timesheet-${state.year}-${String(state.month + 1).padStart(2, '0')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function onTableKeyDown(event) {
+    if (!state.editMode) return;
+    const input = event.target;
+    if (!input || !input.matches('.table-input')) return;
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const currentCell = input.closest('td, th');
+      const currentRow = currentCell?.closest('tr');
+      if (!currentRow) return;
+
+      const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
+      const targetRow = event.shiftKey ? currentRow.previousElementSibling : currentRow.nextElementSibling;
+      if (targetRow) {
+        const targetCell = targetRow.children[cellIndex];
+        const targetInput = targetCell?.querySelector('.table-input');
+        if (targetInput) {
+          targetInput.focus();
+          targetInput.select();
+        }
+      }
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      const currentCell = input.closest('td, th');
+      const currentRow = currentCell?.closest('tr');
+      if (!currentRow) return;
+      const cellIndex = Array.from(currentRow.children).indexOf(currentCell);
+      const targetRow = event.key === 'ArrowDown' ? currentRow.nextElementSibling : currentRow.previousElementSibling;
+      if (targetRow) {
+        const targetCell = targetRow.children[cellIndex];
+        const targetInput = targetCell?.querySelector('.table-input');
+        if (targetInput) {
+          event.preventDefault();
+          targetInput.focus();
+          targetInput.select();
+        }
+      }
+    } else if (event.key === 'Escape') {
+      input.blur();
+    }
+  }
+
+  function onTableClick(event) {
+    if (state.editMode) return;
+    const cell = event.target.closest('td, th');
+    if (!cell || cell.classList.contains('main-header') || cell.classList.contains('corner-cell')) return;
+
+    editToggle.checked = true;
+    onEditToggle();
+
+    const day = cell.closest('tr')?.dataset.day;
+    const employeeId = cell.dataset.employeeId;
+    const isHours = cell.classList.contains('cell-hours');
+    if (day && employeeId) {
+      const key = dateKey(state.year, state.month, Number(day));
+      const targetInput = tableBody.querySelector(`.cell-input[data-date="${key}"][data-employee-id="${employeeId}"][data-field="${isHours ? 'hours' : 'status'}"]`);
+      if (targetInput) {
+        targetInput.focus();
+        targetInput.select();
+      }
+    } else if (employeeId && cell.classList.contains('employee-name')) {
+      const nameInput = tableHead.querySelector(`.employee-name-input[data-employee-id="${employeeId}"]`);
+      if (nameInput) {
+        nameInput.focus();
+        nameInput.select();
+      }
+    }
+  }
+
   function init() {
     const loaded = storage.load();
     initMonthSelect();
@@ -785,6 +1073,7 @@
     monthSelect.addEventListener('change', onMonthChange);
     yearBtn.addEventListener('click', event => {
       event.stopPropagation();
+      yearPickerBase = state.year;
       renderYearPicker();
       yearPopup.classList.toggle('open');
       yearBtn.setAttribute('aria-expanded', yearPopup.classList.contains('open') ? 'true' : 'false');
@@ -803,14 +1092,21 @@
     });
     monthLabelInput.addEventListener('input', () => {
       state.monthLabel = monthLabelInput.value.slice(0, 200);
-      saveState();
-      render(false);
+      const displayLabel = state.monthLabel.trim() || generateMonthLabel();
+      const mainHeader = tableHead.querySelector('.main-header');
+      if (mainHeader) mainHeader.textContent = displayLabel;
+      scheduleSave();
     });
     editToggle.addEventListener('change', onEditToggle);
     settingsDetails.querySelector('summary').addEventListener('click', toggleSettings);
     table.addEventListener('input', onTableInput);
+    table.addEventListener('keydown', onTableKeyDown);
+    table.addEventListener('click', onTableClick);
     tableBody.addEventListener('change', onDayCheckboxChange);
     addEmployeeBtn.addEventListener('click', addEmployee);
+    if (fillWorkdaysBtn) fillWorkdaysBtn.addEventListener('click', fillWorkingDays);
+    if (clearMonthBtn) clearMonthBtn.addEventListener('click', clearMonth);
+    if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportToCsv);
     printBtn.addEventListener('click', onPrint);
     todayBtn.addEventListener('click', () => {
       const now = new Date();

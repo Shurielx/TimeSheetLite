@@ -153,3 +153,78 @@ test('keeps header text and input contained within narrow hours columns without 
   expect(overflow.textOverflow).toBe('ellipsis');
   expect(overflow.whiteSpace).toBe('nowrap');
 });
+
+test('marks November 1st as a Polish holiday', async ({ page }) => {
+  await page.locator('#month-select').selectOption('10');
+  const nov1Row = page.locator('#attendance-table tbody tr[data-day="1"]');
+  await expect(nov1Row).toHaveClass(/special-day/);
+});
+
+test('calculates total hours and updates live', async ({ page }) => {
+  await page.locator('#edit-toggle').check();
+  const firstHours = page.locator('.hours-input').first();
+  await firstHours.fill('8.5');
+  await firstHours.blur();
+  const totalCell = page.locator('.total-hours-value').first();
+  await expect(totalCell).toContainText('8.5');
+
+  const secondHours = page.locator('.hours-input').nth(3);
+  await secondHours.fill('7.5');
+  await secondHours.blur();
+  await expect(totalCell).toContainText('16');
+});
+
+test('synchronizes employee name between sidebar and table header live', async ({ page }) => {
+  await page.locator('#edit-toggle').check();
+  const sidebarName = page.locator('.emp-name').first();
+  await sidebarName.fill('Anna Nowak');
+  const tableHeader = page.locator('th.employee-name').first();
+  await expect(tableHeader.locator('.employee-name-input')).toHaveValue('Anna Nowak');
+});
+
+test('allows clearing month label without reverting', async ({ page }) => {
+  const monthLabel = page.locator('#month-label');
+  await monthLabel.fill('Custom Title');
+  await expect(page.locator('.main-header')).toHaveText('Custom Title');
+  await monthLabel.fill('');
+  await expect(monthLabel).toHaveValue('');
+  await expect(page.locator('.main-header')).toContainText('2026');
+});
+
+test('fills working days with 8 hours and clears month', async ({ page }) => {
+  await page.locator('#edit-toggle').check();
+  await page.locator('#fill-workdays-btn').click();
+  const totalCell = page.locator('.total-hours-value').first();
+  const totalText = await totalCell.textContent();
+  const totalHours = parseFloat(totalText.replace(',', '.'));
+  expect(totalHours).toBeGreaterThan(100);
+
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('#clear-month-btn').click();
+  await expect(page.locator('.total-hours-value').first()).toHaveText('0');
+});
+
+test('exports data to CSV file', async ({ page }) => {
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#export-csv-btn').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^timesheet-\d{4}-\d{2}\.csv$/);
+});
+
+test('clicking a table cell when edit mode is off enables edit mode and focuses input', async ({ page }) => {
+  await expect(page.locator('#edit-toggle')).not.toBeChecked();
+  const firstDataCell = page.locator('#attendance-table tbody tr').first().locator('.cell-hours').first();
+  await firstDataCell.click();
+  await expect(page.locator('#edit-toggle')).toBeChecked();
+  await expect(page.locator('.hours-input').first()).toBeFocused();
+});
+
+test('navigates with Enter key to the next day row', async ({ page }) => {
+  await page.locator('#edit-toggle').check();
+  const firstHours = page.locator('.hours-input').first();
+  await firstHours.focus();
+  await firstHours.fill('8');
+  await page.keyboard.press('Enter');
+  const secondHours = page.locator('.hours-input').nth(3);
+  await expect(secondHours).toBeFocused();
+});

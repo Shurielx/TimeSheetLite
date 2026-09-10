@@ -41,6 +41,7 @@
       [5, 1],   // Święto Pracy
       [5, 3],   // Konstytucja 3 Maja
       [8, 15],  // Wniebowzięcie NMP
+      [11, 1],  // Wszystkich Świętych
       [11, 11], // Dzień Niepodległości
       ...(year >= 2025 ? [[12, 24]] : []), // Wigilia, ustawowo wolna od 2025 r.
       [12, 25], // Boże Narodzenie (pierwszy dzień)

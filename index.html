@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://date.nager.at; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none';">
-<title data-i18n="pageTitle">TimeSheetLite — Attendance Generator v1.1</title>
+<title data-i18n="pageTitle">TimeSheetLite — Attendance Generator v1.2.0</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -52,7 +52,7 @@
 <div id="app">
   <!-- UI Panel -->
   <aside id="ui-panel">
-    <h1><svg class="icon icon-brand" aria-hidden="true" focusable="false"><use href="#icon-brand"></use></svg><span data-i18n="title">Attendance Generator</span> <span class="app-version" data-i18n="version">v1.1</span></h1>
+    <h1><svg class="icon icon-brand" aria-hidden="true" focusable="false"><use href="#icon-brand"></use></svg><span data-i18n="title">Attendance Generator</span> <span class="app-version" data-i18n="version">v1.2.0</span></h1>
 
     <div class="control-group">
       <label for="month-select" data-i18n="monthYear">Month and year</label>
@@ -96,6 +96,8 @@
       </div>
       <div class="btn-group">
         <button type="button" class="btn btn-primary" id="add-employee-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-plus"></use></svg><span data-i18n="add">Add</span></button>
+        <button type="button" class="btn btn-secondary" id="fill-workdays-btn" data-i18n-title="fillWorkdaysDesc"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-calendar"></use></svg><span data-i18n="fillWorkdays">Wypełnij dni robocze (8h)</span></button>
+        <button type="button" class="btn btn-secondary" id="clear-month-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-trash"></use></svg><span data-i18n="clearMonth">Wyczyść miesiąc</span></button>
       </div>
     </div>
 
@@ -103,10 +105,10 @@
       <label class="settings-label" for="column-width-preset" data-i18n="columnWidthPreset">Column width preset</label>
       <div class="control-row">
         <select class="form-control" id="column-width-preset">
-          <option value="preset-90-10">90% / 10%</option>
-          <option value="preset-80-20">80% / 20%</option>
-          <option value="preset-50-50">50% / 50%</option>
-          <option value="preset-20-80">20% / 80%</option>
+          <option value="preset-50-50" data-i18n="preset5050">50% / 50% (Equal)</option>
+          <option value="preset-80-20" data-i18n="preset8020">80% status / 20% hours</option>
+          <option value="preset-90-10" data-i18n="preset9010">90% status / 10% hours</option>
+          <option value="preset-20-80" data-i18n="preset2080">20% status / 80% hours</option>
         </select>
       </div>
     </div>
@@ -177,6 +179,7 @@
 
     <div class="print-actions">
        <button type="button" class="btn btn-print" id="print-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-printer"></use></svg><span data-i18n="print">Print / Save PDF</span></button>
+       <button type="button" class="btn btn-secondary btn-csv" id="export-csv-btn"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-download"></use></svg><span data-i18n="exportCsv">Eksportuj CSV</span></button>
     </div>
     <div class="app-meta">
       <span data-i18n="madeBy">Made by</span>
@@ -201,6 +204,9 @@
         <tbody id="table-body">
           <!-- Dynamically built -->
         </tbody>
+        <tfoot id="table-foot">
+          <!-- Dynamically built -->
+        </tfoot>
       </table>
     </div>
   </main>
