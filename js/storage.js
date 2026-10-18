@@ -7,7 +7,7 @@
   const MAX_DATES = 2000;
   const MAX_DATA_ENTRIES = 20000;
   const VALID_COUNTRIES = new Set(['PL', 'GB', 'DE', 'FR', 'ES', 'IT', 'US', 'UA', 'CZ', 'SK']);
-  const VALID_WIDTH_PRESETS = new Set(['preset-90-10', 'preset-80-20', 'preset-50-50', 'preset-20-80']);
+  const VALID_WIDTH_PRESETS = new Set(['custom', 'preset-90-10', 'preset-80-20', 'preset-50-50', 'preset-20-80']);
   const MAX_FILE_SIZE = 1024 * 1024;
 
   function isPlainObject(value) {
@@ -69,7 +69,7 @@
         id = newEmployeeId();
       }
       ids.add(id);
-      return { id, name: name || fallbackName };
+      return { id, name: name || fallbackName, weight: window.TimeSheetLayout.clamp(item && item.weight, 1, 5, 1) };
     });
 
     return { employees, ids, legacy: input.some(item => typeof item === 'string') };
@@ -85,7 +85,7 @@
     return new Set(value.filter(validDateKey));
   }
 
-  function normalizeData(value, employees, legacyEmployees, state) {
+  function normalizeData(value, employees, legacyEmployees, state, columns) {
     if (value === undefined) return Object.create(null);
     if (!isPlainObject(value) || Object.keys(value).length > MAX_DATA_ENTRIES) {
       throw new Error(message(state, 'dataInvalid', 'The table entries have an invalid format.'));
@@ -103,10 +103,16 @@
         employeeId = employees[Number(employeeRef)] && employees[Number(employeeRef)].id;
       }
       if (!employeeId || !ids.has(employeeId)) return;
-      result[`${date}:${employeeId}`] = {
-        status: text(cell.status),
-        hours: text(cell.hours),
-      };
+      const entry = Object.create(null);
+      // Keep hidden column values and reject unknown/prototype keys.
+      columns.forEach(column => {
+        const value = text(cell[column.id]);
+        if (column.type === 'hours' && !window.TimeSheetLayout.validHours(value)) {
+          throw new Error(message(state, 'invalidHours', 'Invalid hours.'));
+        }
+        if (value) entry[column.id] = value;
+      });
+      if (Object.keys(entry).length) result[`${date}:${employeeId}`] = entry;
     });
     return result;
   }
@@ -132,7 +138,12 @@
         month: state.month,
         year: state.year,
         monthLabel: state.monthLabel,
-        employees: state.employees.map(employee => ({ id: employee.id, name: employee.name })),
+        employees: state.employees.map(employee => ({ ...employee })),
+        columns: state.columns.map(column => ({ ...column })),
+        dayWidth: state.dayWidth,
+        printFontSize: state.printFontSize,
+        rowHeight: state.rowHeight,
+        showTitle: state.showTitle,
         editMode: state.editMode,
         showTotals: state.showTotals,
         darkMode: state.darkMode,
@@ -161,7 +172,13 @@
       if (!Number.isInteger(year) || year < 1900 || year > 2200) throw new Error(message(messageState, 'invalidYear', 'Invalid year.'));
       if (!Number.isInteger(month) || month < 0 || month > 11) throw new Error(message(messageState, 'invalidMonth', 'Invalid month.'));
 
+      const columns = window.TimeSheetLayout.normalizeColumns(data);
       const next = {
+        columns,
+        dayWidth: window.TimeSheetLayout.clamp(data.dayWidth, 12, 35, 14),
+        printFontSize: window.TimeSheetLayout.clamp(data.printFontSize, 8, 12, 9),
+        rowHeight: window.TimeSheetLayout.clamp(data.rowHeight, 5, 12, 5),
+        showTitle: data.showTitle !== false,
         month,
         year,
         monthLabel: text(data.monthLabel),
@@ -172,7 +189,7 @@
         darkSheet: Boolean(data.darkSheet),
         specialDays: normalizeDateSet(data.specialDays, 'specialDays', messageState),
         normalDays: normalizeDateSet(data.normalDays, 'normalDays', messageState),
-        data: normalizeData(data.data, employeeResult.employees, employeeResult.legacy, messageState),
+        data: normalizeData(data.data, employeeResult.employees, employeeResult.legacy, messageState, columns),
         dayLabels: normalizeLabels(data.dayLabels, messageState),
         lang: language,
         holidayCountry: VALID_COUNTRIES.has(data.holidayCountry) ? data.holidayCountry : state.holidayCountry,
@@ -186,8 +203,10 @@
 
     function save() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSerializableState()));
-        queueDataFileSave();
+        const serialized = JSON.stringify(toSerializableState());
+        if (serialized.length > MAX_FILE_SIZE) throw new Error(message(state, 'savedDataTooLarge', 'The saved data exceeds the 1 MB limit.'));
+        localStorage.setItem(STORAGE_KEY, serialized);
+        queueDataFileSave().catch(() => {});
         return true;
       } catch (error) {
         console.warn('Failed to save state:', error);
@@ -217,7 +236,7 @@
 
     function exportToFile() {
       const payload = {
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         state: toSerializableState(),
       };
@@ -231,19 +250,23 @@
     }
 
     function queueDataFileSave() {
-      if (!dataFileHandle) return;
+      if (!dataFileHandle) return Promise.resolve();
       const payload = JSON.stringify({
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         state: toSerializableState(),
       }, null, 2);
-      dataFileWriteQueue = dataFileWriteQueue
+      dataFileWriteQueue = dataFileWriteQueue.catch(() => {})
         .then(async () => {
           const writable = await dataFileHandle.createWritable();
           await writable.write(payload);
           await writable.close();
         })
-        .catch(error => console.warn('Failed to save data file:', error));
+        .catch(error => {
+          window.dispatchEvent(new CustomEvent('timesheet-file-error', { detail: error.message }));
+          throw error;
+        });
+      return dataFileWriteQueue;
     }
 
     function assertFilePickerSupport() {
@@ -286,8 +309,8 @@
         types: filePickerTypes(),
       });
       dataFileHandle = handle;
-      await dataFileWriteQueue;
-      queueDataFileSave();
+      await dataFileWriteQueue.catch(() => {});
+      await queueDataFileSave();
     }
 
     function getDataFileName() {

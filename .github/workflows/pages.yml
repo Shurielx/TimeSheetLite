@@ -27,10 +27,15 @@ jobs:
         run: npm ci
       - name: Run browser tests
         run: npx playwright install --with-deps chromium && npm test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify PDF content, page sizes and margins
+        run: python -m pip install -r scripts/requirements-pdf.txt && python scripts/verify_pdfs.py
       - name: Check JavaScript syntax
         run: npm run check
       - name: Check linked local files
-        run: test -f css/styles.css && test -f js/app.js && test -f js/storage.js && test -f js/holidays.js && test -f js/i18n.js && test -f PRIVACY.pl.md
+        run: test -f css/styles.css && test -f js/app.js && test -f js/storage.js && test -f js/layout.js && test -f js/print.js && test -f js/holidays.js && test -f js/i18n.js && test -f PRIVACY.pl.md
 
       - name: Check Pages does not contain data files
         run: |

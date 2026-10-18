@@ -39,6 +39,8 @@
     colHoursName: '',
     colWidthPreset: 'preset-50-50',
     pageLayout: 'portrait',
+    columns: window.TimeSheetLayout.defaultColumns(),
+    dayWidth: 14, printFontSize: 9, rowHeight: 5, showTitle: true,
   };
 
   const monthSelect = document.getElementById('month-select');
@@ -76,7 +78,7 @@
   const exportCsvBtn = document.getElementById('export-csv-btn');
   const printOrientationStyle = document.getElementById('print-orientation');
   const storage = window.TimeSheetStorage.create(state);
-  const MAX_PRINT_EMPLOYEES = 8;
+  const MAX_PRINT_EMPLOYEES = 100;
 
   let yearPickerBase = state.year;
 
@@ -120,9 +122,7 @@
     return value.replace(/[\r\n]+/g, ' ').trim().slice(0, maxLength);
   }
 
-  function isValidHours(value) {
-    return value === '' || /^(?:[0-9]|1[0-9]|2[0-4])(?:[.,][0-9]{1,2})?$/.test(value);
-  }
+  const isValidHours = window.TimeSheetLayout.validHours;
 
   function makeElement(tag, className, content) {
     const element = document.createElement(tag);
@@ -248,21 +248,18 @@
     printOrientationStyle.textContent = `@page { size: A4 ${state.pageLayout}; margin: 6mm; }`;
   }
 
+  function visibleColumns() { return state.columns.filter(column => column.visible); }
+  function columnLabel(column) { return column.label || t(column.id === 'status' || column.id === 'hours' ? column.id : 'newColumn'); }
   function calculateEmployeeTotals() {
-    const days = daysInMonth(state.month, state.year);
     const totals = {};
-    state.employees.forEach(employee => {
+    state.employees.forEach(employee => state.columns.filter(column => column.type === 'hours').forEach(column => {
       let sum = 0;
-      for (let day = 1; day <= days; day += 1) {
-        const key = `${dateKey(state.year, state.month, day)}:${employee.id}`;
-        const hours = state.data[key]?.hours;
-        if (hours) {
-          const num = parseFloat(hours.replace(',', '.'));
-          if (!isNaN(num)) sum += num;
-        }
+      for (let day = 1; day <= daysInMonth(state.month, state.year); day += 1) {
+        const value = state.data[`${dateKey(state.year, state.month, day)}:${employee.id}`]?.[column.id] || '';
+        if (isValidHours(value)) sum += Number(value.replace(',', '.'));
       }
-      totals[employee.id] = Math.round(sum * 100) / 100;
-    });
+      totals[`${employee.id}:${column.id}`] = Math.round(sum * 100) / 100;
+    }));
     return totals;
   }
 
@@ -273,211 +270,237 @@
     return state.lang === 'pl' ? str.replace('.', ',') : str;
   }
 
-  function renderFoot(statusWidth, hoursWidth) {
-    if (!tableFoot) return;
+  function tagColumn(element, employee, column) {
+    element.dataset.employeeId = employee.id;
+    element.dataset.columnId = column.id;
+    return element;
+  }
+  function renderFoot() {
     tableFoot.replaceChildren();
-    if (!state.showTotals) return;
-
+    if (!state.showTotals || !visibleColumns().some(column => column.type === 'hours')) return;
     const row = makeElement('tr', 'total-row');
-    const labelCell = makeElement('th', 'total-label-cell', t('total'));
-    labelCell.setAttribute('scope', 'row');
-    row.appendChild(labelCell);
-
+    const label = makeElement('th', 'total-label-cell', t('total'));
+    label.scope = 'row'; row.appendChild(label);
     const totals = calculateEmployeeTotals();
-    state.employees.forEach(employee => {
-      const statusCell = makeElement('td', 'cell-status total-cell');
-      statusCell.style.width = statusWidth;
-
-      const hoursCell = makeElement('td', 'cell-hours total-cell total-hours-value');
-      hoursCell.style.width = hoursWidth;
-      hoursCell.dataset.employeeId = employee.id;
-      const total = totals[employee.id] || 0;
-      hoursCell.textContent = formatHoursNumber(total);
-      hoursCell.setAttribute('aria-label', `${employee.name}: ${t('total')} ${hoursCell.textContent} ${t('hours')}`);
-      row.append(statusCell, hoursCell);
-    });
+    state.employees.forEach(employee => visibleColumns().forEach(column => {
+      const cell = tagColumn(makeElement('td', `total-cell cell-${column.id}`), employee, column);
+      if (column.type === 'hours') {
+        cell.classList.add('total-hours-value');
+        cell.textContent = formatHoursNumber(totals[`${employee.id}:${column.id}`]);
+        cell.setAttribute('aria-label', `${employee.name}: ${columnLabel(column)}, ${t('total')} ${cell.textContent}`);
+      }
+      row.appendChild(cell);
+    }));
     tableFoot.appendChild(row);
   }
-
-  function updateTotalsUI() {
-    if (!tableFoot || !state.showTotals) return;
-    const totals = calculateEmployeeTotals();
-    tableFoot.querySelectorAll('.total-hours-value').forEach(cell => {
-      const empId = cell.dataset.employeeId;
-      const total = totals[empId] || 0;
-      cell.textContent = formatHoursNumber(total);
+  function updateTotalsUI() { renderFoot(); }
+  function resizeText(input) {
+    if (input.tagName !== 'TEXTAREA') return;
+    input.style.height = 'auto'; input.style.height = `${input.scrollHeight}px`;
+  }
+  function updateLayoutStatus() {
+    const count = window.TimeSheetPrint.plan(state).length;
+    document.getElementById('layout-status').textContent = t('layoutSummary').replace('{people}', state.employees.length).replace('{columns}', visibleColumns().length).replace('{parts}', count);
+  }
+  function updateInteractionStatus(input) {
+    const status = document.getElementById('active-cell-status');
+    if (!input || !table.contains(input)) {
+      status.textContent = t(state.editMode ? 'editingReady' : 'previewReady');
+      return;
+    }
+    const employee = state.employees.find(item => item.id === input.dataset.employeeId);
+    const column = state.columns.find(item => item.id === input.dataset.field);
+    const date = input.dataset.date || (input.dataset.day ? dateKey(state.year, state.month, Number(input.dataset.day)) : '');
+    const details = [date, employee?.name, column ? columnLabel(column) : ''].filter(Boolean);
+    if (input.matches('.day-label-input, .day-special-toggle')) details.push(t('day'));
+    if (input.matches('.employee-name-input')) details.push(t('employees'));
+    status.textContent = `${t('editingNow')}: ${details.join(' · ')}`;
+  }
+  function updateColumnWidths() {
+    const dayPercent = Math.min(25, state.dayWidth * 96 / 25.4 / Math.max(1, table.getBoundingClientRect().width) * 100);
+    const employeeWeight = state.employees.reduce((sum, employee) => sum + employee.weight, 0);
+    const columns = visibleColumns();
+    const columnWeight = columns.reduce((sum, column) => sum + column.weight, 0);
+    tableColgroup.firstElementChild.style.width = `${dayPercent}%`;
+    Array.from(tableColgroup.children).slice(1).forEach(col => {
+      const employee = state.employees.find(item => item.id === col.dataset.employeeId);
+      const column = columns.find(item => item.id === col.dataset.columnId);
+      col.style.width = `${(100 - dayPercent) * employee.weight / employeeWeight * column.weight / columnWeight}%`;
     });
   }
-
   function render(syncEdits = false, animate = false) {
     if (syncEdits) flushVisibleEdits();
-
-    const days = daysInMonth(state.month, state.year);
-    const employees = state.employees;
-    const label = state.monthLabel.trim() || generateMonthLabel();
-    const employeeCount = employees.length || 1;
-    let statusRatio = 50;
-    let hoursRatio = 50;
-    if (state.colWidthPreset === 'preset-90-10') [statusRatio, hoursRatio] = [90, 10];
-    if (state.colWidthPreset === 'preset-80-20') [statusRatio, hoursRatio] = [80, 20];
-    if (state.colWidthPreset === 'preset-20-80') [statusRatio, hoursRatio] = [20, 80];
-    const statusWidth = `${statusRatio / employeeCount}%`;
-    const hoursWidth = `${hoursRatio / employeeCount}%`;
-
+    const columns = visibleColumns();
     monthLabelInput.placeholder = generateMonthLabel();
-    if (document.activeElement !== monthLabelInput) {
-      monthLabelInput.value = state.monthLabel;
-    }
-    if (tableColgroup) {
-      tableColgroup.replaceChildren();
-      const cornerCol = document.createElement('col');
-      cornerCol.style.width = '2.8rem';
-      tableColgroup.appendChild(cornerCol);
-      employees.forEach(() => {
-        const statusCol = document.createElement('col');
-        statusCol.style.width = statusWidth;
-        const hoursCol = document.createElement('col');
-        hoursCol.style.width = hoursWidth;
-        tableColgroup.append(statusCol, hoursCol);
-      });
-    }
-
+    if (document.activeElement !== monthLabelInput) monthLabelInput.value = state.monthLabel;
+    tableColgroup.replaceChildren();
+    const dayCol = document.createElement('col'); dayCol.style.width = `${state.dayWidth}mm`; tableColgroup.appendChild(dayCol);
+    state.employees.forEach(employee => columns.forEach(column => {
+      const col = tagColumn(document.createElement('col'), employee, column);
+      tableColgroup.appendChild(col);
+    }));
     tableHead.replaceChildren();
-    const mainRow = makeElement('tr');
-    const mainHeader = makeElement('th', 'main-header', label);
-    mainHeader.colSpan = 1 + employees.length * 2;
-    mainRow.appendChild(mainHeader);
-    tableHead.appendChild(mainRow);
-
-    const subHeaderRow = makeElement('tr');
-    subHeaderRow.appendChild(makeElement('th', 'corner-cell'));
-    const statusLabel = state.colStatusName.trim() || t('status');
-    const hoursLabel = state.colHoursName.trim() || t('hours');
-    employees.forEach(() => {
-      const statusHeader = makeElement('th', 'sub-header cell-status');
-      statusHeader.style.width = statusWidth;
-      const hoursHeader = makeElement('th', 'sub-header cell-hours');
-      hoursHeader.style.width = hoursWidth;
-      if (state.editMode) {
-        statusHeader.appendChild(createColumnHeaderInput(statusLabel, 'colStatusName'));
-        hoursHeader.appendChild(createColumnHeaderInput(hoursLabel, 'colHoursName'));
-      } else {
-        statusHeader.textContent = statusLabel;
-        hoursHeader.textContent = hoursLabel;
-      }
-      subHeaderRow.append(statusHeader, hoursHeader);
-    });
-
-    const employeeRow = makeElement('tr');
-    employeeRow.appendChild(makeElement('th', 'corner-cell', t('day')));
-    employees.forEach(employee => {
+    if (state.showTitle) {
+      const row = makeElement('tr');
+      const title = makeElement('th', 'main-header', state.monthLabel.trim() || generateMonthLabel());
+      title.colSpan = 1 + state.employees.length * columns.length; row.appendChild(title); tableHead.appendChild(row);
+    }
+    const peopleRow = makeElement('tr');
+    const dayHeader = makeElement('th', 'corner-cell', t('day')); dayHeader.rowSpan = 2; dayHeader.scope = 'col'; peopleRow.appendChild(dayHeader);
+    const columnRow = makeElement('tr');
+    state.employees.forEach(employee => {
       const header = makeElement('th', 'employee-name');
-      header.colSpan = 2;
-      header.dataset.employeeId = employee.id;
+      header.colSpan = columns.length; header.dataset.employeeId = employee.id; header.scope = 'colgroup';
       header.setAttribute('aria-label', `${t('employees')}: ${employee.name}`);
       if (state.editMode) {
-        const input = document.createElement('input');
-        input.className = 'table-input employee-name-input';
-        input.value = employee.name;
-        input.maxLength = 100;
-        input.dataset.employeeId = employee.id;
-        input.setAttribute('aria-label', `${t('employees')}: ${employee.name}`);
-        header.appendChild(input);
-      } else {
-        header.textContent = employee.name;
-      }
-      employeeRow.appendChild(header);
-    });
-    tableHead.append(employeeRow, subHeaderRow);
-
-    tableBody.replaceChildren();
-    for (let day = 1; day <= days; day += 1) {
-      const key = dateKey(state.year, state.month, day);
-      const special = isSpecialDay(state.year, state.month, day);
-      const row = makeElement('tr', special ? 'special-day' : '');
-      row.dataset.day = day;
-      const dayCell = makeElement('td');
-      const dayLabel = state.dayLabels[key] || String(day);
-      if (state.editMode) {
-        const input = document.createElement('input');
-        input.className = 'table-input day-label-input';
-        input.value = dayLabel;
-        input.maxLength = 30;
-        input.dataset.date = key;
-        input.setAttribute('aria-label', `${t('day')} ${day}`);
-        dayCell.appendChild(input);
-      } else {
-        dayCell.appendChild(makeElement('span', '', dayLabel));
-      }
-      if (state.editMode) {
-        const control = makeElement('label', 'day-special-control');
-        control.title = t('specialDayTooltip');
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'day-special-toggle';
-        checkbox.dataset.day = day;
-        checkbox.checked = state.specialDays.has(key) || (special && !state.normalDays.has(key));
-        checkbox.setAttribute('aria-label', t('specialDayLabel').replace('{day}', day));
-        control.appendChild(checkbox);
-        dayCell.appendChild(control);
-      }
-      row.appendChild(dayCell);
-
-      employees.forEach(employee => {
-        const cellData = state.data[`${key}:${employee.id}`] || {};
-        const statusCell = makeElement('td', 'cell-status');
-        statusCell.style.width = statusWidth;
-        statusCell.dataset.employeeId = employee.id;
-        const hoursCell = makeElement('td', 'cell-hours');
-        hoursCell.style.width = hoursWidth;
-        hoursCell.dataset.employeeId = employee.id;
-        if (state.editMode) {
-          const statusInput = document.createElement('input');
-          statusInput.className = 'table-input cell-input';
-          statusInput.value = cellData.status || '';
-          statusInput.maxLength = 30;
-          statusInput.dataset.date = key;
-          statusInput.dataset.employeeId = employee.id;
-          statusInput.dataset.field = 'status';
-          statusInput.setAttribute('aria-label', `${t('status')} ${employee.name}, ${day}`);
-          statusCell.appendChild(statusInput);
-          const hoursInput = document.createElement('input');
-          hoursInput.className = 'table-input cell-input hours-input';
-          hoursInput.value = cellData.hours || '';
-          hoursInput.maxLength = 5;
-          hoursInput.inputMode = 'decimal';
-          hoursInput.dataset.date = key;
-          hoursInput.dataset.employeeId = employee.id;
-          hoursInput.dataset.field = 'hours';
-          hoursInput.setAttribute('aria-label', `${t('hours')} ${employee.name}, ${day}`);
-          hoursCell.appendChild(hoursInput);
-        } else {
-          statusCell.textContent = cellData.status || '';
-          hoursCell.textContent = cellData.hours || '';
-        }
-        row.append(statusCell, hoursCell);
+        const input = makeElement('textarea', 'table-input employee-name-input'); input.rows = 1;
+        input.value = employee.name; input.maxLength = 100; input.dataset.employeeId = employee.id;
+        input.setAttribute('aria-label', `${t('employees')}: ${employee.name}`); header.appendChild(input);
+      } else header.textContent = employee.name;
+      peopleRow.appendChild(header);
+      columns.forEach(column => {
+        const th = tagColumn(makeElement('th', `sub-header cell-${column.id}`), employee, column); th.scope = 'col';
+        if (state.editMode) th.appendChild(createColumnHeaderInput(column));
+        else th.textContent = columnLabel(column);
+        columnRow.appendChild(th);
       });
+    });
+    tableHead.append(peopleRow, columnRow);
+    tableBody.replaceChildren();
+    for (let day = 1; day <= daysInMonth(state.month, state.year); day += 1) {
+      const date = dateKey(state.year, state.month, day);
+      const special = isSpecialDay(state.year, state.month, day);
+      const row = makeElement('tr', special ? 'special-day' : ''); row.dataset.day = day;
+      const dayCell = makeElement('td');
+      if (state.editMode) {
+        const input = makeElement('textarea', 'table-input day-label-input'); input.rows = 1;
+        input.value = state.dayLabels[date] || String(day); input.maxLength = 30; input.dataset.date = date;
+        input.setAttribute('aria-label', `${t('day')} ${day}`); dayCell.appendChild(input);
+        const control = makeElement('label', 'day-special-control'); control.title = t('specialDayTooltip');
+        const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'day-special-toggle';
+        checkbox.dataset.day = day; checkbox.checked = special; checkbox.setAttribute('aria-label', t('specialDayLabel').replace('{day}', day));
+        control.appendChild(checkbox); dayCell.appendChild(control);
+      } else dayCell.textContent = state.dayLabels[date] || String(day);
+      row.appendChild(dayCell);
+      state.employees.forEach(employee => columns.forEach(column => {
+        const value = state.data[`${date}:${employee.id}`]?.[column.id] || '';
+        const cell = tagColumn(makeElement('td', `cell-${column.id}`), employee, column);
+        if (state.editMode) {
+          const input = makeElement(column.type === 'hours' ? 'input' : 'textarea', `table-input cell-input${column.type === 'hours' ? ' hours-input' : ''}`);
+          if (column.type === 'text') input.rows = 1;
+          input.value = value; input.maxLength = column.type === 'hours' ? 5 : 200;
+          if (column.type === 'hours') input.inputMode = 'decimal';
+          input.dataset.date = date; input.dataset.employeeId = employee.id; input.dataset.field = column.id;
+          input.setAttribute('aria-label', `${columnLabel(column)} ${employee.name}, ${day}`); cell.appendChild(input);
+        } else cell.textContent = value;
+        row.appendChild(cell);
+      }));
       tableBody.appendChild(row);
     }
-
-    renderFoot(statusWidth, hoursWidth);
-
-    sheetPage.className = `sheet-page ${state.pageLayout === 'landscape' ? 'landscape' : 'portrait'}`;
+    renderFoot();
+    sheetPage.className = `sheet-page ${state.pageLayout}`;
+    sheetPage.style.setProperty('--day-width', `${state.dayWidth}mm`);
+    const peopleWeight = state.employees.reduce((sum, employee) => sum + employee.weight, 0);
+    const fieldWeight = columns.reduce((sum, column) => sum + column.weight, 0);
+    const minimum = Math.max(...state.employees.flatMap(employee => columns.map(column => (column.type === 'hours' ? 64 : 95) * peopleWeight / employee.weight * fieldWeight / column.weight)));
+    sheetPage.style.minWidth = `${Math.max(state.pageLayout === 'landscape' ? 1050 : 750, state.dayWidth * 96 / 25.4 + minimum + 32)}px`;
     table.classList.toggle('edit-mode', state.editMode);
-    updateEmployeeListUI();
-    updatePrintStyle();
+    updateColumnWidths();
+    table.querySelectorAll('textarea').forEach(resizeText);
+    updateEmployeeListUI(); updateColumnListUI(); syncLayoutControls(); updateLayoutStatus(); updateInteractionStatus(); updatePrintStyle();
     if (animate) animateSheet();
   }
+  function createColumnHeaderInput(column) {
+    const input = makeElement('textarea', 'table-input column-header-input'); input.rows = 1;
+    input.value = column.label; input.placeholder = columnLabel(column); input.maxLength = 100;
+    input.dataset.field = column.id; input.setAttribute('aria-label', columnLabel(column)); return input;
+  }
 
-  function createColumnHeaderInput(label, field) {
-    const input = document.createElement('input');
-    input.className = 'table-input column-header-input';
-    input.value = field === 'colStatusName' ? state.colStatusName : state.colHoursName;
-    input.placeholder = label;
-    input.maxLength = 100;
-    input.dataset.field = field;
-    input.setAttribute('aria-label', label);
-    return input;
+  function actionButton(text, title, action, disabled = false) {
+    const button = makeElement('button', 'btn btn-secondary btn-small', text);
+    button.type = 'button'; button.title = title; button.setAttribute('aria-label', title);
+    button.disabled = disabled; button.addEventListener('click', action); return button;
+  }
+  function moveItem(list, index, direction) {
+    const moved = list[index];
+    [list[index], list[index + direction]] = [list[index + direction], list[index]];
+    render(); saveState();
+    document.querySelector(list === state.employees ? `.emp-name[data-employee-id="${moved.id}"]` : `.column-name[data-column-id="${moved.id}"]`)?.focus();
+  }
+  function updateColumnListUI() {
+    const list = document.getElementById('column-list'); list.replaceChildren();
+    state.columns.forEach((column, index) => {
+      const card = makeElement('div', 'column-card'); card.dataset.columnId = column.id;
+      const top = makeElement('div', 'column-top');
+      const visible = document.createElement('input'); visible.type = 'checkbox'; visible.checked = column.visible;
+      visible.setAttribute('aria-label', `${t('showColumn')}: ${columnLabel(column)}`);
+      visible.disabled = column.visible && visibleColumns().length === 1;
+      visible.addEventListener('change', () => { column.visible = visible.checked; state.colWidthPreset = 'custom'; render(); saveState(); });
+      const name = makeElement('input', 'form-control column-name'); name.value = column.label;
+      name.placeholder = columnLabel(column); name.maxLength = 100; name.dataset.columnId = column.id;
+      name.setAttribute('aria-label', `${t('columnName')} ${index + 1}`);
+      name.addEventListener('input', () => {
+        column.label = singleLine(name.value, 100);
+        tableHead.querySelectorAll(`.column-header-input[data-field="${column.id}"]`).forEach(input => { input.value = name.value; resizeText(input); });
+        if (!state.editMode) tableHead.querySelectorAll(`[data-column-id="${column.id}"]`).forEach(header => { header.textContent = columnLabel(column); });
+        scheduleSave();
+      });
+      top.append(visible, name); card.appendChild(top);
+      const options = makeElement('div', 'column-options');
+      const typeLabel = makeElement('label', '', t('columnType'));
+      const type = makeElement('select', 'form-control column-type');
+      [['text', t('textColumn')], ['hours', t('hoursColumn')]].forEach(([value, label]) => {
+        const option = makeElement('option', '', label); option.value = value; type.appendChild(option);
+      });
+      type.value = column.type;
+      type.addEventListener('change', () => {
+        if (type.value === 'hours' && Object.values(state.data).some(entry => !isValidHours(entry[column.id] || ''))) {
+          window.alert(t('columnHoursConflict')); type.value = column.type; return;
+        }
+        column.type = type.value; render(); saveState();
+      });
+      typeLabel.appendChild(type);
+      const weightLabel = makeElement('label', '', t('relativeWidth'));
+      const weight = makeElement('input', 'form-control column-weight'); weight.type = 'number'; weight.min = 1; weight.max = 20; weight.step = 1; weight.value = column.weight;
+      weight.addEventListener('change', () => { column.weight = window.TimeSheetLayout.clamp(weight.value, 1, 20, 1); state.colWidthPreset = 'custom'; render(); saveState(); });
+      weightLabel.appendChild(weight); options.append(typeLabel, weightLabel);
+      const actions = makeElement('div', 'column-actions');
+      actions.append(
+        actionButton('↑', t('moveEarlier'), () => moveItem(state.columns, index, -1), index === 0),
+        actionButton('↓', t('moveLater'), () => moveItem(state.columns, index, 1), index === state.columns.length - 1),
+        actionButton(t('remove'), `${t('remove')}: ${columnLabel(column)}`, () => {
+          if (!window.confirm(t('removeColumnConfirm').replace('{name}', columnLabel(column)))) return;
+          state.columns.splice(index, 1);
+          Object.values(state.data).forEach(entry => { delete entry[column.id]; });
+          render(); saveState();
+        }, column.visible && visibleColumns().length === 1)
+      );
+      card.append(options, actions); list.appendChild(card);
+    });
+    document.getElementById('add-column-btn').disabled = state.columns.length >= 12;
+    fillWorkdaysBtn.disabled = !visibleColumns().some(column => column.type === 'hours');
+  }
+  function syncLayoutControls() {
+    document.getElementById('day-width').value = state.dayWidth;
+    document.getElementById('print-font-size').value = state.printFontSize;
+    document.getElementById('row-height').value = state.rowHeight;
+    document.getElementById('show-title').checked = state.showTitle;
+    columnWidthPreset.value = state.colWidthPreset;
+    columnWidthPreset.disabled = !visibleColumns().some(column => column.id === 'status') || !visibleColumns().some(column => column.id === 'hours');
+  }
+  function initLayoutEditor() {
+    document.getElementById('add-column-btn').addEventListener('click', () => {
+      if (state.columns.length >= 12) return;
+      state.columns.push({ id: createEmployeeId().replace('emp-', 'col-'), label: t('newColumn'), type: 'text', weight: 2, visible: true });
+      state.colWidthPreset = 'custom'; render(); saveState();
+      document.querySelector('.column-card:last-child .column-name')?.focus();
+    });
+    [['day-width', 'dayWidth', 12, 35], ['print-font-size', 'printFontSize', 8, 12], ['row-height', 'rowHeight', 5, 12]].forEach(([id, field, min, max]) => {
+      document.getElementById(id).addEventListener('change', event => {
+        state[field] = window.TimeSheetLayout.clamp(event.target.value, min, max, min); render(); saveState();
+      });
+    });
+    document.getElementById('show-title').addEventListener('change', event => { state.showTitle = event.target.checked; render(); saveState(); });
   }
 
   function animateSheet() {
@@ -496,7 +519,7 @@
 
   function updateEmployeeListUI() {
     employeeList.replaceChildren();
-    state.employees.forEach(employee => {
+    state.employees.forEach((employee, index) => {
       const item = makeElement('div', 'employee-item');
       const name = document.createElement('input');
       name.className = 'emp-name form-control';
@@ -512,9 +535,18 @@
       remove.title = t('removeTitle');
       remove.setAttribute('aria-label', `${t('removeTitle')}: ${employee.name}`);
       remove.addEventListener('click', () => removeEmployee(employee.id));
-      item.append(name, remove);
+      remove.disabled = state.employees.length === 1;
+      const weightLabel = makeElement('label', 'employee-weight-label', t('relativeWidth'));
+      const weight = makeElement('input', 'form-control emp-weight'); weight.type = 'number'; weight.min = 1; weight.max = 5; weight.value = employee.weight;
+      weight.setAttribute('aria-label', `${t('relativeWidth')}: ${employee.name}`);
+      weight.addEventListener('change', () => { employee.weight = window.TimeSheetLayout.clamp(weight.value, 1, 5, 1); render(); saveState(); });
+      weightLabel.appendChild(weight);
+      const moves = makeElement('div', 'employee-moves');
+      moves.append(actionButton('↑', `${t('moveEarlier')}: ${employee.name}`, () => moveItem(state.employees, index, -1), index === 0), actionButton('↓', `${t('moveLater')}: ${employee.name}`, () => moveItem(state.employees, index, 1), index === state.employees.length - 1));
+      item.append(name, weightLabel, moves, remove);
       employeeList.appendChild(item);
     });
+    addEmployeeBtn.disabled = state.employees.length >= MAX_PRINT_EMPLOYEES;
   }
 
   function addEmployee() {
@@ -523,9 +555,10 @@
       window.alert(t('employeeLimit'));
       return;
     }
-    state.employees.push({ id: createEmployeeId(), name: `${t('newEmployee')} ${state.employees.length + 1}` });
+    state.employees.push({ id: createEmployeeId(), name: `${t('newEmployee')} ${state.employees.length + 1}`, weight: 1 });
     render(false, true);
     saveState();
+    employeeList.querySelector('.employee-item:last-child .emp-name')?.focus();
   }
 
   function removeEmployee(employeeId) {
@@ -549,6 +582,7 @@
   function onTableInput(event) {
     if (!state.editMode) return;
     const input = event.target;
+    resizeText(input);
     if (input.matches('.employee-name-input')) {
       const employee = state.employees.find(item => item.id === input.dataset.employeeId);
       if (employee) {
@@ -560,19 +594,25 @@
         input.closest('th')?.setAttribute('aria-label', `${t('employees')}: ${input.value}`);
       }
     } else if (input.matches('.column-header-input')) {
-      state[input.dataset.field] = singleLine(input.value, 100);
+      const column = state.columns.find(item => item.id === input.dataset.field);
+      if (!column) return;
+      column.label = singleLine(input.value, 100);
+      const sidebar = document.querySelector(`.column-name[data-column-id="${column.id}"]`);
+      if (sidebar) sidebar.value = input.value;
       document.querySelectorAll(`.column-header-input[data-field="${input.dataset.field}"]`).forEach(other => {
-        if (other !== input) other.value = state[input.dataset.field];
+        if (other !== input) { other.value = column.label; resizeText(other); }
       });
       scheduleSave();
       return;
     } else if (input.matches('.day-label-input')) {
       state.dayLabels[input.dataset.date] = singleLine(input.value, 30);
     } else if (input.matches('.cell-input')) {
-      const value = singleLine(input.value, input.dataset.field === 'hours' ? 5 : 30);
-      if (input.dataset.field === 'hours') {
+      const column = state.columns.find(item => item.id === input.dataset.field);
+      const value = singleLine(input.value, column.type === 'hours' ? 5 : 200);
+      if (column.type === 'hours') {
         const valid = isValidHours(value);
         input.classList.toggle('is-invalid', !valid);
+        input.setAttribute('aria-invalid', String(!valid));
         input.title = valid ? '' : t('invalidHours');
         if (!valid) {
           input.setCustomValidity(t('invalidHours'));
@@ -583,9 +623,9 @@
       const key = `${input.dataset.date}:${input.dataset.employeeId}`;
       const cell = state.data[key] || {};
       cell[input.dataset.field] = value;
-      if (cell.status || cell.hours) state.data[key] = cell;
+      if (Object.values(cell).some(Boolean)) state.data[key] = cell;
       else delete state.data[key];
-      if (input.dataset.field === 'hours') updateTotalsUI();
+      if (column.type === 'hours') updateTotalsUI();
     } else {
       return;
     }
@@ -601,7 +641,7 @@
     if (tableHeader) {
       const tableInput = tableHeader.querySelector('.employee-name-input');
       if (tableInput && tableInput.value !== event.target.value) {
-        tableInput.value = event.target.value;
+        tableInput.value = event.target.value; resizeText(tableInput);
       } else if (!tableInput) {
         tableHeader.textContent = event.target.value;
       }
@@ -642,10 +682,11 @@
     const header = makeElement('div', 'year-popup-header');
     const prevBtn = makeElement('button', 'year-nav-btn', '‹');
     prevBtn.type = 'button';
-    prevBtn.setAttribute('aria-label', 'Previous years');
+    prevBtn.setAttribute('aria-label', t('previousYears'));
+    prevBtn.disabled = yearPickerBase <= 1902;
     prevBtn.addEventListener('click', event => {
       event.stopPropagation();
-      yearPickerBase -= 6;
+      yearPickerBase = Math.max(1902, yearPickerBase - 6);
       renderYearPicker();
     });
 
@@ -653,10 +694,11 @@
 
     const nextBtn = makeElement('button', 'year-nav-btn', '›');
     nextBtn.type = 'button';
-    nextBtn.setAttribute('aria-label', 'Next years');
+    nextBtn.setAttribute('aria-label', t('nextYears'));
+    nextBtn.disabled = yearPickerBase >= 2197;
     nextBtn.addEventListener('click', event => {
       event.stopPropagation();
-      yearPickerBase += 6;
+      yearPickerBase = Math.min(2197, yearPickerBase + 6);
       renderYearPicker();
     });
     header.append(prevBtn, rangeLabel, nextBtn);
@@ -665,6 +707,7 @@
     for (let year = yearPickerBase - 2; year <= yearPickerBase + 3; year += 1) {
       const tile = makeElement('button', `year-tile${year === state.year ? ' selected' : ''}`, year);
       tile.type = 'button';
+      tile.disabled = year < 1900 || year > 2200;
       tile.addEventListener('click', event => {
         event.stopPropagation();
         selectYear(year);
@@ -688,7 +731,7 @@
 
   function selectYear(year) {
     flushVisibleEdits();
-    state.year = year;
+    state.year = Math.round(window.TimeSheetLayout.clamp(year, 1900, 2200, state.year));
     yearBtn.textContent = year;
     yearPopup.classList.remove('open');
     yearBtn.setAttribute('aria-expanded', 'false');
@@ -707,115 +750,15 @@
     saveState();
   }
 
-  function createPrintTable() {
-    const printTable = table.cloneNode(true);
-    const sourceInputs = table.querySelectorAll('input');
-    const printInputs = printTable.querySelectorAll('input');
-    sourceInputs.forEach((input, index) => {
-      const printInput = printInputs[index];
-      if (!printInput) return;
-      if (input.type === 'checkbox') {
-        printInput.closest('.day-special-control')?.remove();
-        return;
-      }
-      printInput.replaceWith(document.createTextNode(input.value));
-    });
-    return printTable;
-  }
-
-  function openPrintPreview() {
-    let printWindow = null;
-    try {
-      printWindow = window.open('', '_blank');
-    } catch (error) {
-      printWindow = null;
-    }
-    if (!printWindow) {
-      window.print();
-      return;
-    }
-
-    const printDocument = printWindow.document;
-    printDocument.open();
-    printDocument.write('<!doctype html><html><head><meta charset="UTF-8"><title>TimeSheetLite</title></head><body></body></html>');
-    printDocument.close();
-
-    const style = printDocument.createElement('style');
-    style.textContent = `
-      @page { size: A4 ${state.pageLayout}; margin: 6mm; }
-      * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; background: #fff; color: #000; }
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
-      #sheet-container { display: block; width: 100%; }
-      #sheet-container .sheet-page {
-        width: 198mm;
-        max-width: 198mm;
-        min-height: 285mm;
-        padding: 0;
-        margin: 0;
-      }
-      #sheet-container .sheet-page.landscape {
-        width: 285mm;
-        max-width: 285mm;
-        min-height: 198mm;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: fixed;
-        font-size: 9pt;
-        page-break-inside: avoid;
-      }
-      th, td {
-        border: 1px solid #000;
-        padding: 3px 4px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        text-align: center;
-        vertical-align: middle;
-      }
-      .main-header { font-size: 1.1rem; font-weight: 700; padding: 0.65rem 0.5rem; }
-      thead th { font-weight: 700; font-size: 0.75rem; }
-      thead th.employee-name { font-size: 0.85rem; }
-      thead th.sub-header { font-weight: 600; font-size: 0.7rem; }
-      thead th.cell-hours, tbody td.cell-hours { padding-left: 1px; padding-right: 1px; }
-      thead th.cell-hours { font-size: 0.65rem; }
-      tbody td.cell-hours { font-size: 0.7rem; }
-      thead th.corner-cell { width: 2.8rem; }
-      tbody td { font-size: 0.75rem; }
-      tbody td:first-child { font-weight: 700; width: 2.8rem; }
-      .special-day { background: #e0e0e0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .sheet-page.portrait tbody tr td { height: 4mm; font-size: 10px; padding: 1px 3px; }
-      .sheet-page.landscape tbody tr td { height: 4.8mm; font-size: 11px; padding: 2px 4px; }
-      tfoot th, tfoot td {
-        border: 1px solid #000;
-        padding: 3px 4px;
-        text-align: center;
-        vertical-align: middle;
-        font-weight: 700;
-      }
-      .total-hours-value { font-weight: 800; }
-      .sheet-page.portrait tfoot tr td, .sheet-page.portrait tfoot tr th { height: 4mm; font-size: 10px; padding: 1px 3px; }
-      .sheet-page.landscape tfoot tr td, .sheet-page.landscape tfoot tr th { height: 4.8mm; font-size: 11px; padding: 2px 4px; }
-    `;
-    printDocument.head.appendChild(style);
-
-    const container = printDocument.createElement('main');
-    container.id = 'sheet-container';
-    const page = printDocument.createElement('div');
-    page.className = `sheet-page ${state.pageLayout === 'landscape' ? 'landscape' : 'portrait'}`;
-    page.appendChild(createPrintTable());
-    container.appendChild(page);
-    printDocument.body.appendChild(container);
-
-    let printed = false;
-    printWindow.setTimeout(() => {
-      if (printed || printWindow.closed) return;
-      printed = true;
-      printWindow.focus();
-      printWindow.print();
-    }, 50);
+  function printStrings() { return { part: t('part'), print: t('print'), printHint: t('printHint') }; }
+  function openPrintPreview() { window.TimeSheetPrint.open(table, state, printStrings()); }
+  function prepareNativePrint() {
+    document.getElementById('print-root')?.remove();
+    document.getElementById('native-print-style')?.remove();
+    const style = document.createElement('style'); style.id = 'native-print-style'; style.media = 'print';
+    style.textContent = window.TimeSheetPrint.css(state) + '\nbody > #app, body > #save-status { display: none !important; } #print-root { display: block !important; }';
+    document.head.appendChild(style);
+    document.body.appendChild(window.TimeSheetPrint.build(document, table, state, printStrings()));
   }
 
   function toggleSettings(event) {
@@ -839,6 +782,7 @@
   function onPrint() {
     flushVisibleEdits();
     saveState();
+    if (table.querySelector('.is-invalid')) { table.querySelector('.is-invalid').reportValidity(); return; }
     openPrintPreview();
   }
 
@@ -917,10 +861,9 @@
         if (!isSpecialDay(state.year, state.month, day)) {
           const key = `${dateKey(state.year, state.month, day)}:${employee.id}`;
           const current = state.data[key] || {};
-          state.data[key] = {
-            status: current.status || '',
-            hours: '8',
-          };
+          const entry = { ...current };
+          visibleColumns().filter(column => column.type === 'hours').forEach(column => { if (!entry[column.id]) entry[column.id] = '8'; });
+          if (Object.values(entry).some(Boolean)) state.data[key] = entry;
         }
       }
     });
@@ -946,19 +889,22 @@
     flushVisibleEdits();
     saveState();
     const days = daysInMonth(state.month, state.year);
-    const statusLabel = state.colStatusName.trim() || t('status');
-    const hoursLabel = state.colHoursName.trim() || t('hours');
+    const columns = visibleColumns();
+    const csv = value => {
+      let text = String(value ?? '');
+      if (/^[\s]*[=+@-]/.test(text)) text = "'" + text;
+      return '"' + text.replace(/"/g, '""') + '"';
+    };
     const sep = ';';
     const lines = [];
 
     const title = state.monthLabel.trim() || generateMonthLabel();
-    lines.push(`"${title.replace(/"/g, '""')}"`);
+    lines.push(csv(title));
     lines.push('');
 
     const headers = [`"${t('day')}"`];
     state.employees.forEach(emp => {
-      headers.push(`"${emp.name.replace(/"/g, '""')} - ${statusLabel}"`);
-      headers.push(`"${emp.name.replace(/"/g, '""')} - ${hoursLabel}"`);
+      columns.forEach(column => headers.push(csv(`${emp.name} - ${columnLabel(column)}`)));
     });
     lines.push(headers.join(sep));
 
@@ -968,21 +914,18 @@
       const key = dateKey(state.year, state.month, day);
       const dayLabel = state.dayLabels[key] || String(day);
       const special = isSpecialDay(state.year, state.month, day);
-      const row = [`"${dayLabel}${special ? ' *' : ''}"`];
+      const row = [csv(`${dayLabel}${special ? ' *' : ''}`)];
       state.employees.forEach(emp => {
         const cell = state.data[`${key}:${emp.id}`] || {};
-        row.push(`"${(cell.status || '').replace(/"/g, '""')}"`);
-        row.push(`"${(cell.hours || '').replace(/"/g, '""')}"`);
+        columns.forEach(column => row.push(csv(cell[column.id] || '')));
       });
       lines.push(row.join(sep));
     }
 
-    if (state.showTotals) {
+    if (state.showTotals && columns.some(column => column.type === 'hours')) {
       const totalRow = [`"${t('total')}"`];
       state.employees.forEach(emp => {
-        totalRow.push('""');
-        const total = totals[emp.id] || 0;
-        totalRow.push(`"${formatHoursNumber(total)}"`);
+        columns.forEach(column => totalRow.push(csv(column.type === 'hours' ? formatHoursNumber(totals[`${emp.id}:${column.id}`]) : '')));
       });
       lines.push(totalRow.join(sep));
     }
@@ -1041,17 +984,17 @@
   function onTableClick(event) {
     if (state.editMode) return;
     const cell = event.target.closest('td, th');
-    if (!cell || cell.classList.contains('main-header') || cell.classList.contains('corner-cell')) return;
+    if (!cell || cell.closest('tfoot') || cell.classList.contains('main-header') || cell.classList.contains('corner-cell')) return;
 
     editToggle.checked = true;
     onEditToggle();
 
     const day = cell.closest('tr')?.dataset.day;
     const employeeId = cell.dataset.employeeId;
-    const isHours = cell.classList.contains('cell-hours');
+    const field = cell.dataset.columnId;
     if (day && employeeId) {
       const key = dateKey(state.year, state.month, Number(day));
-      const targetInput = tableBody.querySelector(`.cell-input[data-date="${key}"][data-employee-id="${employeeId}"][data-field="${isHours ? 'hours' : 'status'}"]`);
+      const targetInput = tableBody.querySelector(`.cell-input[data-date="${key}"][data-employee-id="${employeeId}"][data-field="${field}"]`);
       if (targetInput) {
         targetInput.focus();
         targetInput.select();
@@ -1062,6 +1005,10 @@
         nameInput.focus();
         nameInput.select();
       }
+    } else if (field && employeeId) {
+      tableHead.querySelector(`th[data-employee-id="${employeeId}"][data-column-id="${field}"] .column-header-input`)?.focus();
+    } else if (day) {
+      tableBody.querySelector(`tr[data-day="${day}"] .day-label-input`)?.focus();
     }
   }
 
@@ -1099,6 +1046,11 @@
         yearBtn.setAttribute('aria-expanded', 'false');
       }
     });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && yearPopup.classList.contains('open')) {
+        yearPopup.classList.remove('open'); yearBtn.setAttribute('aria-expanded', 'false'); yearBtn.focus();
+      }
+    });
     monthLabelInput.addEventListener('input', () => {
       state.monthLabel = monthLabelInput.value.slice(0, 200);
       const displayLabel = state.monthLabel.trim() || generateMonthLabel();
@@ -1106,9 +1058,22 @@
       if (mainHeader) mainHeader.textContent = displayLabel;
       scheduleSave();
     });
+    initLayoutEditor();
+    new ResizeObserver(() => { if (tableColgroup.children.length) { updateColumnWidths(); table.querySelectorAll('textarea').forEach(resizeText); } }).observe(sheetPage);
+    window.addEventListener('beforeprint', prepareNativePrint);
+    window.addEventListener('afterprint', () => { document.getElementById('print-root')?.remove(); document.getElementById('native-print-style')?.remove(); });
+    window.addEventListener('timesheet-file-error', () => updateDataFileStatus(t('dataFileWriteFailed')));
     editToggle.addEventListener('change', onEditToggle);
     settingsDetails.querySelector('summary').addEventListener('click', toggleSettings);
     table.addEventListener('input', onTableInput);
+    document.addEventListener('focusin', event => updateInteractionStatus(event.target));
+    table.addEventListener('focusout', event => {
+      const input = event.target;
+      if (!input.matches('.is-invalid')) return;
+      input.value = state.data[`${input.dataset.date}:${input.dataset.employeeId}`]?.[input.dataset.field] || '';
+      input.setCustomValidity(''); input.classList.remove('is-invalid'); input.removeAttribute('aria-invalid');
+      saveStatus.textContent = t('invalidHoursRejected'); saveStatus.classList.add('save-error');
+    });
     table.addEventListener('keydown', onTableKeyDown);
     table.addEventListener('click', onTableClick);
     tableBody.addEventListener('change', onDayCheckboxChange);
@@ -1147,16 +1112,11 @@
     showTotalsToggle.addEventListener('change', () => {
       flushVisibleEdits();
       state.showTotals = showTotalsToggle.checked;
-      renderFoot(`${50 / (state.employees.length || 1)}%`, `${50 / (state.employees.length || 1)}%`);
       render(false, true);
       saveState();
     });
     darkToggle.addEventListener('change', () => {
       state.darkMode = darkToggle.checked;
-      if (state.darkMode) {
-        state.darkSheet = true;
-        darkSheetToggle.checked = true;
-      }
       applyTheme();
       saveState();
     });
@@ -1168,6 +1128,10 @@
     columnWidthPreset.addEventListener('change', () => {
       flushVisibleEdits();
       state.colWidthPreset = columnWidthPreset.value;
+      if (state.colWidthPreset !== 'custom') {
+        const defaults = window.TimeSheetLayout.defaultColumns(state);
+        state.columns.forEach(column => { const match = defaults.find(item => item.id === column.id); if (match) column.weight = match.weight; });
+      }
       animateControl(columnWidthPreset);
       render(false, true);
       saveState();
@@ -1205,6 +1169,7 @@
     computeHolidays();
     render(false);
     if (loaded) saveState();
+    if (loaded === false) { saveStatus.textContent = t('loadError'); saveStatus.classList.add('save-error'); }
   }
 
   document.addEventListener('DOMContentLoaded', init);

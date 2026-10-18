@@ -20,13 +20,15 @@ test('edits a single cell and preserves a valid hours value', async ({ page }) =
   await expect(page.locator('.hours-input').first()).toHaveValue('8.5');
 });
 
-test('limits the sheet to eight employees', async ({ page }) => {
+test('allows nine people and splits wide printouts into readable parts', async ({ page }) => {
   await page.locator('#edit-toggle').check();
-  for (let count = 0; count < 5; count += 1) await page.locator('#add-employee-btn').click();
-  await expect(page.locator('.employee-item')).toHaveCount(8);
-  page.once('dialog', dialog => dialog.dismiss());
-  await page.locator('#add-employee-btn').click();
-  await expect(page.locator('.employee-item')).toHaveCount(8);
+  for (let count = 0; count < 6; count += 1) await page.locator('#add-employee-btn').click();
+  await expect(page.locator('.employee-item')).toHaveCount(9);
+  const popupPromise = page.waitForEvent('popup');
+  await page.locator('#print-btn').click();
+  const popup = await popupPromise;
+  await expect(popup.locator('.print-panel')).toHaveCount(3);
+  await expect(popup.locator('th.employee-name')).toHaveCount(9);
 });
 
 test('edits column headers directly in the sheet', async ({ page }) => {
@@ -99,18 +101,13 @@ test('opens a standalone print preview with the current table', async ({ page })
 });
 
 for (const layout of ['portrait', 'landscape']) {
-  test(`uses the A4 printable area in ${layout}`, async ({ page }) => {
+  test(`uses the A4 printable width in ${layout}`, async ({ page }) => {
     await page.locator('#page-layout').selectOption(layout);
-    await page.emulateMedia({ media: 'print' });
-    const size = await page.locator('.sheet-page').evaluate(element => {
-      const rect = element.getBoundingClientRect();
-      return { width: rect.width, height: rect.height };
-    });
-    const expected = layout === 'portrait'
-      ? { width: 198 / 25.4 * 96, height: 285 / 25.4 * 96 }
-      : { width: 285 / 25.4 * 96, height: 198 / 25.4 * 96 };
-    expect(size.width).toBeCloseTo(expected.width, 0);
-    expect(size.height).toBeGreaterThanOrEqual(expected.height - 1);
+    const popupPromise = page.waitForEvent('popup');
+    await page.locator('#print-btn').click();
+    const popup = await popupPromise;
+    const rect = await popup.locator('.print-panel').boundingBox();
+    expect(rect.width).toBeCloseTo((layout === 'portrait' ? 198 : 285) / 25.4 * 96, 0);
   });
 }
 
@@ -136,22 +133,13 @@ test('adjusts column proportions according to column width preset on screen and 
   await printPage.close();
 });
 
-test('keeps header text and input contained within narrow hours columns without overflowing', async ({ page }) => {
+test('wraps full column headers rather than truncating them', async ({ page }) => {
   await page.locator('#column-width-preset').selectOption('preset-90-10');
-  const hoursHeader = page.locator('th.cell-hours').first();
-  const box = await hoursHeader.boundingBox();
-  expect(box.width).toBeGreaterThan(0);
-  const overflow = await hoursHeader.evaluate(el => {
-    const style = window.getComputedStyle(el);
-    return {
-      overflow: style.overflow,
-      textOverflow: style.textOverflow,
-      whiteSpace: style.whiteSpace,
-    };
+  const styles = await page.locator('th.cell-hours').first().evaluate(el => {
+    const style = getComputedStyle(el);
+    return { overflow: style.overflow, whiteSpace: style.whiteSpace, overflowWrap: style.overflowWrap };
   });
-  expect(overflow.overflow).toBe('hidden');
-  expect(overflow.textOverflow).toBe('ellipsis');
-  expect(overflow.whiteSpace).toBe('nowrap');
+  expect(styles).toEqual({ overflow: 'visible', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' });
 });
 
 test('marks November 1st as a Polish holiday', async ({ page }) => {
