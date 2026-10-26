@@ -1,13 +1,19 @@
 (function () {
   'use strict';
-  // Keep readable text sizes. Split wide sheets rather than scaling away content.
+  // Keep readable text sizes: split wide sheets by default. 'page' fit keeps
+  // everything on one sheet and lets fit() scale it down instead.
+  const pageWidth = state => state.pageLayout === 'landscape' ? 285 : 198;
+  const pageHeight = state => state.pageLayout === 'landscape' ? 198 : 285;
   function plan(state) {
-    const available = (state.pageLayout === 'landscape' ? 285 : 198) - state.dayWidth - 1;
+    const available = pageWidth(state) - state.dayWidth - 1;
     const columns = state.columns.filter(column => column.visible);
     const minWidth = column => (column.type === 'hours' ? 14 : 24) * state.printFontSize / 9;
     function width(group) {
       const total = group.columns.reduce((sum, column) => sum + column.weight, 0);
       return Math.max(...group.columns.map(column => minWidth(column) * total / column.weight)) * group.employee.weight;
+    }
+    if (state.printFit === 'page') {
+      return state.employees.length ? [state.employees.map(employee => ({ employee, columns, width: width({ employee, columns }) }))] : [];
     }
     const groups = [];
     state.employees.forEach(employee => {
@@ -106,11 +112,13 @@
         title.colSpan = 1 + leafCount;
         if (!state.showTitle) title.closest('tr').remove();
       }
+      const totalWidth = groups.reduce((sum, group) => sum + group.width, 0);
+      const panelWidth = state.printFit === 'page' ? Math.max(pageWidth(state), state.dayWidth + 1 + totalWidth) : pageWidth(state);
+      if (state.printFit === 'page') { page.dataset.fit = 'page'; page.style.width = `${panelWidth}mm`; }
       const colgroup = clone.querySelector('colgroup');
       if (colgroup) {
-        const available = (state.pageLayout === 'landscape' ? 285 : 198) - state.dayWidth;
+        const available = panelWidth - state.dayWidth;
         colgroup.firstElementChild.style.width = `${state.dayWidth}mm`;
-        const totalWidth = groups.reduce((sum, group) => sum + group.width, 0);
         groups.forEach(group => {
           const weight = group.columns.reduce((sum, column) => sum + column.weight, 0);
           group.columns.forEach(column => {
@@ -131,6 +139,17 @@
     return root;
   }
 
+  // Scale one-page panels to the printable A4 area. Needs the print CSS active.
+  function fit(root, state) {
+    const mm = 96 / 25.4;
+    root.querySelectorAll('.print-panel[data-fit="page"]').forEach(page => {
+      page.style.zoom = '';
+      const box = page.getBoundingClientRect();
+      const scale = Math.min(1, pageWidth(state) * mm / box.width, (pageHeight(state) - 2) * mm / box.height);
+      if (scale < 1) page.style.zoom = String(Math.floor(scale * 1000) / 1000);
+    });
+  }
+
   function open(source, state, strings) {
     const popup = window.open('', '_blank');
     if (!popup) { window.print(); return; }
@@ -146,8 +165,9 @@
     const hint = doc.createElement('span'); hint.textContent = strings.printHint;
     toolbar.append(button, hint); doc.body.appendChild(toolbar);
     const container = doc.createElement('main'); container.id = 'sheet-container';
-    container.appendChild(build(doc, source, state, strings)); doc.body.appendChild(container);
+    const root = build(doc, source, state, strings);
+    container.appendChild(root); doc.body.appendChild(container); fit(root, state);
     popup.setTimeout(() => { if (!popup.closed) { popup.focus(); popup.print(); } }, 100);
   }
-  window.TimeSheetPrint = Object.freeze({ plan, css, build, open });
+  window.TimeSheetPrint = Object.freeze({ plan, css, build, fit, open });
 })();

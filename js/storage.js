@@ -158,6 +158,7 @@
         colHoursName: state.colHoursName,
         colWidthPreset: state.colWidthPreset,
         pageLayout: state.pageLayout,
+        printFit: state.printFit,
       };
     }
 
@@ -197,6 +198,7 @@
         colHoursName: text(data.colHoursName),
         colWidthPreset: VALID_WIDTH_PRESETS.has(data.colWidthPreset) ? data.colWidthPreset : 'preset-50-50',
         pageLayout: data.pageLayout === 'landscape' ? 'landscape' : 'portrait',
+        printFit: data.printFit === 'page' ? 'page' : 'split',
       };
       Object.assign(state, next);
     }

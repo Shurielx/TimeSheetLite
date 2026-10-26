@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1 — 2026-10-26
+
+- Add a **Wide tables** print option: split into readable parts (default) or shrink the whole sheet onto one A4 page. Applies to the print button and Ctrl+P.
+
 ## 1.3.0 — 2026-10-18
 
 - Add up to 12 customizable columns per person: text/signature or hours, with independent hour totals.

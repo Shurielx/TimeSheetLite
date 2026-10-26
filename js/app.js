@@ -39,6 +39,7 @@
     colHoursName: '',
     colWidthPreset: 'preset-50-50',
     pageLayout: 'portrait',
+    printFit: 'split',
     columns: window.TimeSheetLayout.defaultColumns(),
     dayWidth: 14, printFontSize: 9, rowHeight: 5, showTitle: true,
   };
@@ -63,6 +64,7 @@
   const darkSheetToggle = document.getElementById('dark-sheet-toggle');
   const columnWidthPreset = document.getElementById('column-width-preset');
   const pageLayoutSelect = document.getElementById('page-layout');
+  const printFitSelect = document.getElementById('print-fit');
   const settingsDetails = document.getElementById('dev-settings');
   const dataFileStatus = document.getElementById('data-file-status');
   const openDataFileBtn = document.getElementById('open-data-file-btn');
@@ -758,7 +760,9 @@
     const style = document.createElement('style'); style.id = 'native-print-style'; style.media = 'print';
     style.textContent = window.TimeSheetPrint.css(state) + '\nbody > #app, body > #save-status { display: none !important; } #print-root { display: block !important; }';
     document.head.appendChild(style);
-    document.body.appendChild(window.TimeSheetPrint.build(document, table, state, printStrings()));
+    const root = window.TimeSheetPrint.build(document, table, state, printStrings());
+    document.body.appendChild(root);
+    style.media = 'all'; window.TimeSheetPrint.fit(root, state); style.media = 'print';
   }
 
   function toggleSettings(event) {
@@ -805,6 +809,7 @@
       darkSheetToggle.checked = state.darkSheet;
       columnWidthPreset.value = state.colWidthPreset;
       pageLayoutSelect.value = state.pageLayout;
+      printFitSelect.value = state.printFit;
       applyLanguage(state.lang);
       applyTheme();
       computeHolidays();
@@ -824,6 +829,7 @@
     darkSheetToggle.checked = state.darkSheet;
     columnWidthPreset.value = state.colWidthPreset;
     pageLayoutSelect.value = state.pageLayout;
+    printFitSelect.value = state.printFit;
     applyLanguage(state.lang);
     applyTheme();
     computeHolidays();
@@ -1025,6 +1031,7 @@
     darkSheetToggle.checked = state.darkSheet;
     columnWidthPreset.value = state.colWidthPreset;
     pageLayoutSelect.value = state.pageLayout;
+    printFitSelect.value = state.printFit;
 
     monthSelect.addEventListener('change', onMonthChange);
     yearBtn.addEventListener('click', event => {
@@ -1140,6 +1147,13 @@
       flushVisibleEdits();
       state.pageLayout = pageLayoutSelect.value === 'landscape' ? 'landscape' : 'portrait';
       animateControl(pageLayoutSelect);
+      render(false, true);
+      saveState();
+    });
+    printFitSelect.addEventListener('change', () => {
+      flushVisibleEdits();
+      state.printFit = printFitSelect.value === 'page' ? 'page' : 'split';
+      animateControl(printFitSelect);
       render(false, true);
       saveState();
     });

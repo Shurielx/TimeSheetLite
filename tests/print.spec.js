@@ -93,3 +93,45 @@ test('twelve columns and extreme proportions split without losing columns', asyn
   await popup.pdf({ path: testInfo.outputPath('sheet.pdf'), preferCSSPageSize: true });
   await fs.writeFile(testInfo.outputPath('expected.json'), JSON.stringify({ markers: Object.values(cell), orientation: 'portrait' }));
 });
+
+for (const orientation of ['portrait', 'landscape']) {
+  for (const [label, people, extreme] of [['five people', 5, false], ['nine people, largest text and rows', 9, true]]) {
+    test(`one-page fit ${orientation}: ${label} shrink onto a single A4 sheet`, async ({ page }, testInfo) => {
+      await page.goto(appUrl);
+      const state = { year: 2026, month: 9, pageLayout: orientation, printFit: 'page', employees: [], data: {},
+        ...(extreme ? { printFontSize: 12, rowHeight: 12, dayWidth: 35, columns: [
+          { id: 'status', label: 'Podpis pracownika', type: 'text', weight: 3 },
+          { id: 'hours', label: 'Godziny', type: 'hours', weight: 1 },
+          { id: 'notes', label: 'Uwagi', type: 'text', weight: 4 },
+        ] } : {}) };
+      const markers = [];
+      for (let employee = 1; employee <= people; employee++) {
+        const id = `person${employee}`; state.employees.push({ id, name: `Osoba ${employee} Długie nazwisko` });
+        for (let day = 1; day <= 31; day++) {
+          const marker = `D${String(day).padStart(2, '0')}P${employee}END`; markers.push(marker);
+          const long = extreme && day === 31 ? ' Bardzo długi wpis zawinięty w komórce KONIECWPISU' : '';
+          state.data[`2026-10-${String(day).padStart(2, '0')}:${id}`] = { status: marker + long, hours: '8', notes: extreme ? 'Biuro' : undefined };
+        }
+      }
+      await page.addInitScript(value => { if (!sessionStorage.getItem('test-seeded')) { localStorage.setItem('tsl-state', JSON.stringify(value)); sessionStorage.setItem('test-seeded', '1'); } }, state); await page.reload();
+      await expect(page.locator('#print-fit')).toHaveValue('page');
+      const pending = page.waitForEvent('popup'); await page.locator('#print-btn').click(); const popup = await pending;
+      await expect(popup.locator('.print-panel')).toHaveCount(1);
+      await expect(popup.locator('th.employee-name')).toHaveCount(people);
+      await expect(popup.locator('.print-panel-note')).toHaveCount(0);
+      const pdf = await popup.pdf({ path: testInfo.outputPath('sheet.pdf'), preferCSSPageSize: true, printBackground: true });
+      expect(pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)).toHaveLength(1);
+      await fs.writeFile(testInfo.outputPath('expected.json'), JSON.stringify({ markers: extreme ? [...markers, 'KONIECWPISU'] : markers, orientation, pages: 1 }));
+    });
+  }
+}
+
+test('one-page fit also applies to Ctrl+P', async ({ page }, testInfo) => {
+  await page.goto(appUrl);
+  const employees = Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: `Osoba ${i + 1}` }));
+  const state = { year: 2026, month: 9, pageLayout: 'landscape', printFit: 'page', employees, data: { '2026-10-31:p6': { status: 'LASTPERSONEND', hours: '8' } } };
+  await page.addInitScript(value => { if (!sessionStorage.getItem('test-seeded')) { localStorage.setItem('tsl-state', JSON.stringify(value)); sessionStorage.setItem('test-seeded', '1'); } }, state); await page.reload();
+  const pdf = await page.pdf({ path: testInfo.outputPath('sheet.pdf'), preferCSSPageSize: true });
+  expect(pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)).toHaveLength(1);
+  await fs.writeFile(testInfo.outputPath('expected.json'), JSON.stringify({ markers: ['LASTPERSONEND', 'Osoba7'], orientation: 'landscape', pages: 1 }));
+});
