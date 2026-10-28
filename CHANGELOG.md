@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2 — 2026-10-28
+
+- Stretch day rows so the printed table fills the whole A4 page height instead of leaving the bottom third empty, giving more room for signatures. On by default; turn off with **Stretch rows to fill the A4 page** in **Table layout**. Works with split parts, one-page fit and Ctrl+P.
+
 ## 1.3.1 — 2026-10-26
 
 - Add a **Wide tables** print option: split into readable parts (default) or shrink the whole sheet onto one A4 page. Applies to the print button and Ctrl+P.

@@ -41,7 +41,7 @@
     pageLayout: 'portrait',
     printFit: 'split',
     columns: window.TimeSheetLayout.defaultColumns(),
-    dayWidth: 14, printFontSize: 9, rowHeight: 5, showTitle: true,
+    dayWidth: 14, printFontSize: 9, rowHeight: 5, showTitle: true, printFill: true,
   };
 
   const monthSelect = document.getElementById('month-select');
@@ -487,6 +487,7 @@
     document.getElementById('print-font-size').value = state.printFontSize;
     document.getElementById('row-height').value = state.rowHeight;
     document.getElementById('show-title').checked = state.showTitle;
+    document.getElementById('print-fill').checked = state.printFill;
     columnWidthPreset.value = state.colWidthPreset;
     columnWidthPreset.disabled = !visibleColumns().some(column => column.id === 'status') || !visibleColumns().some(column => column.id === 'hours');
   }
@@ -503,6 +504,7 @@
       });
     });
     document.getElementById('show-title').addEventListener('change', event => { state.showTitle = event.target.checked; render(); saveState(); });
+    document.getElementById('print-fill').addEventListener('change', event => { state.printFill = event.target.checked; saveState(); });
   }
 
   function animateSheet() {

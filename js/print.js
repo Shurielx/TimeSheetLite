@@ -139,13 +139,22 @@
     return root;
   }
 
-  // Scale one-page panels to the printable A4 area. Needs the print CSS active.
+  // Scale one-page panels to the printable A4 area and, with printFill, stretch
+  // day rows so the table uses the full page height. Needs the print CSS active.
   function fit(root, state) {
     const mm = 96 / 25.4;
-    root.querySelectorAll('.print-panel[data-fit="page"]').forEach(page => {
+    root.querySelectorAll('.print-panel').forEach(page => {
+      const rows = Array.from(page.querySelectorAll('tbody tr'));
       page.style.zoom = '';
+      rows.forEach(row => row.style.removeProperty('height'));
       const box = page.getBoundingClientRect();
-      const scale = Math.min(1, pageWidth(state) * mm / box.width, (pageHeight(state) - 2) * mm / box.height);
+      const scale = page.dataset.fit === 'page' ? Math.min(1, pageWidth(state) * mm / box.width, (pageHeight(state) - 2) * mm / box.height) : 1;
+      // A few mm of slack keeps rounding from pushing the last row onto a new sheet.
+      const extra = (pageHeight(state) - 4) * mm / scale - box.height;
+      if (state.printFill && rows.length && extra > 0) {
+        const heights = rows.map(row => row.getBoundingClientRect().height);
+        rows.forEach((row, index) => { row.style.height = `${heights[index] + extra / rows.length}px`; });
+      }
       if (scale < 1) page.style.zoom = String(Math.floor(scale * 1000) / 1000);
     });
   }

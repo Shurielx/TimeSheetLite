@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://date.nager.at; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none';">
-<title data-i18n="pageTitle">TimeSheetLite — Attendance Generator v1.3.1</title>
-  <link rel="stylesheet" href="css/styles.css?v=1.3.1">
+<title data-i18n="pageTitle">TimeSheetLite — Attendance Generator v1.3.2</title>
+  <link rel="stylesheet" href="css/styles.css?v=1.3.2">
 </head>
 <body>
 
@@ -52,7 +52,7 @@
 <div id="app">
   <!-- UI Panel -->
   <aside id="ui-panel">
-    <h1><svg class="icon icon-brand" aria-hidden="true" focusable="false"><use href="#icon-brand"></use></svg><span data-i18n="title">Attendance Generator</span> <span class="app-version" data-i18n="version">v1.3.1</span></h1>
+    <h1><svg class="icon icon-brand" aria-hidden="true" focusable="false"><use href="#icon-brand"></use></svg><span data-i18n="title">Attendance Generator</span> <span class="app-version" data-i18n="version">v1.3.2</span></h1>
 
     <div class="control-group">
       <label for="month-select" data-i18n="monthYear">Month and year</label>
@@ -119,6 +119,7 @@
         <label><span data-i18n="printFontSize">Print font (pt)</span><input id="print-font-size" class="form-control" type="number" min="8" max="12" step="1" value="9"></label>
         <label><span data-i18n="rowHeight">Minimum row (mm)</span><input id="row-height" class="form-control" type="number" min="5" max="12" step="1" value="6"></label>
         <label class="checkbox-label"><input id="show-title" type="checkbox" checked><span data-i18n="showTitle">Show sheet title</span></label>
+        <label class="checkbox-label"><input id="print-fill" type="checkbox" checked><span data-i18n="printFill">Stretch rows to fill the A4 page</span></label>
       </div>
     </details>
     <div class="control-group settings-section">
@@ -245,11 +246,11 @@
 </div>
   <p id="save-status" class="save-status" aria-live="polite"></p>
   <style id="print-orientation"></style>
-  <script src="js/i18n.js?v=1.3.1" defer></script>
-  <script src="js/holidays.js?v=1.3.1" defer></script>
-  <script src="js/layout.js?v=1.3.1" defer></script>
-  <script src="js/print.js?v=1.3.1" defer></script>
-  <script src="js/storage.js?v=1.3.1" defer></script>
-  <script src="js/app.js?v=1.3.1" defer></script>
+  <script src="js/i18n.js?v=1.3.2" defer></script>
+  <script src="js/holidays.js?v=1.3.2" defer></script>
+  <script src="js/layout.js?v=1.3.2" defer></script>
+  <script src="js/print.js?v=1.3.2" defer></script>
+  <script src="js/storage.js?v=1.3.2" defer></script>
+  <script src="js/app.js?v=1.3.2" defer></script>
 </body>
 </html>

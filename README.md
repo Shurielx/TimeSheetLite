@@ -1,4 +1,4 @@
-# TimeSheetLite v1.3.1
+# TimeSheetLite v1.3.2
 
 Simple attendance sheet generator for printing or saving as PDF. Everything is kept locally in your browser.
 
@@ -6,7 +6,7 @@ Simple attendance sheet generator for printing or saving as PDF. Everything is k
 
 **[Open TimeSheetLite](https://shurielx.github.io/TimeSheetLite/)** · [View the repository](https://github.com/Shurielx/TimeSheetLite)
 
-Current release: **v1.3.1**. Created by [Shuriel](https://github.com/Shurielx). [Report an issue](https://github.com/Shurielx/TimeSheetLite/issues/new) or [suggest something](https://github.com/Shurielx/TimeSheetLite/issues/new).
+Current release: **v1.3.2**. Created by [Shuriel](https://github.com/Shurielx). [Report an issue](https://github.com/Shurielx/TimeSheetLite/issues/new) or [suggest something](https://github.com/Shurielx/TimeSheetLite/issues/new).
 
 ## What you can do
 
@@ -44,7 +44,7 @@ The toolbar identifies the date, person and column of the active field. A visibl
 
 Hiding a column preserves its entries in local storage and JSON backups; it excludes the column from the sheet, printout and CSV. Removing a column or person deletes their entries from **every month**, after confirmation. Clearing a month clears every column for that month, including hidden columns. Keep a JSON backup before deleting data.
 
-Print uses A4 with 6 mm margins. Choose **100% scale** and turn off browser headers/footers. Text prints at the chosen 8–12 pt size. When the table is too wide, people or column groups continue on separate parts with repeated dates and headings. Long rows can continue onto further pages, with repeated column headers. The preview reports horizontal parts, not the final number of paper pages. A normal sheet with three people, two equal columns and 28–31 days fits one A4 page at default settings, in either orientation. Custom widths, long text, larger fonts or taller rows may require more pages. To keep everything on one sheet instead, set **Wide tables → Shrink to one A4 page**; the whole table is scaled down to fit, so text gets smaller as the table grows.
+Print uses A4 with 6 mm margins. Choose **100% scale** and turn off browser headers/footers. Text prints at the chosen 8–12 pt size. When the table is too wide, people or column groups continue on separate parts with repeated dates and headings. Long rows can continue onto further pages, with repeated column headers. The preview reports horizontal parts, not the final number of paper pages. A normal sheet with three people, two equal columns and 28–31 days fits one A4 page at default settings, in either orientation. Custom widths, long text, larger fonts or taller rows may require more pages. To keep everything on one sheet instead, set **Wide tables → Shrink to one A4 page**; the whole table is scaled down to fit, so text gets smaller as the table grows. **Stretch rows to fill the A4 page** (on by default, in **Table layout**) makes day rows taller so the table uses the whole page height, leaving more room for signatures; the row height setting then acts as a minimum.
 
 The print button and browser Ctrl+P use the same table preparation. PDF layout has been tested in Chromium; physical printer margins and other browser print engines can differ.
 

@@ -135,3 +135,25 @@ test('one-page fit also applies to Ctrl+P', async ({ page }, testInfo) => {
   expect(pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)).toHaveLength(1);
   await fs.writeFile(testInfo.outputPath('expected.json'), JSON.stringify({ markers: ['LASTPERSONEND', 'Osoba7'], orientation: 'landscape', pages: 1 }));
 });
+
+for (const orientation of ['portrait', 'landscape']) {
+  test(`fill page ${orientation}: rows stretch to the A4 height and can be turned off`, async ({ page }, testInfo) => {
+    await page.goto(appUrl);
+    const state = { year: 2026, month: 1, pageLayout: orientation, employees: [{ id: 'anna', name: 'Anna Nowak' }], data: { '2026-02-28:anna': { status: 'LASTFILLDAYEND', hours: '8' } } };
+    await page.addInitScript(value => { if (!sessionStorage.getItem('test-seeded')) { localStorage.setItem('tsl-state', JSON.stringify(value)); sessionStorage.setItem('test-seeded', '1'); } }, state); await page.reload();
+    await expect(page.locator('#print-fill')).toBeChecked();
+    const height = async () => {
+      const pending = page.waitForEvent('popup'); await page.locator('#print-btn').click(); const popup = await pending;
+      const mm = await popup.locator('.print-panel').evaluate(el => el.getBoundingClientRect().height / (96 / 25.4));
+      return { popup, mm };
+    };
+    const filled = await height();
+    expect(filled.mm).toBeGreaterThan((orientation === 'portrait' ? 285 : 198) - 8);
+    const pdf = await filled.popup.pdf({ path: testInfo.outputPath('sheet.pdf'), preferCSSPageSize: true, printBackground: true });
+    expect(pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)).toHaveLength(1);
+    await fs.writeFile(testInfo.outputPath('expected.json'), JSON.stringify({ markers: ['LASTFILLDAYEND'], orientation, pages: 1 }));
+    await filled.popup.close();
+    await page.locator('#print-fill').evaluate(el => { el.checked = false; el.dispatchEvent(new Event('change')); });
+    expect((await height()).mm).toBeLessThan(filled.mm - 20);
+  });
+}

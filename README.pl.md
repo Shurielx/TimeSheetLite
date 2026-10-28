@@ -1,4 +1,4 @@
-# TimeSheetLite 1.3.1
+# TimeSheetLite 1.3.2
 
 Generator miesięcznych list obecności do druku i zapisu jako PDF. Wpisy pozostają lokalnie w przeglądarce.
 
@@ -30,7 +30,7 @@ Przed usuwaniem danych wyeksportuj kopię JSON.
 
 Wybierz orientację pionową lub poziomą i kliknij **Drukuj / Zapisz PDF**. W oknie przeglądarki ustaw A4, skalę 100% i wyłącz nagłówki oraz stopki przeglądarki. Aplikacja ustawia marginesy 6 mm.
 
-Standardowy arkusz dla trzech osób, z dwiema równymi kolumnami i miesiącem 28–31 dni, mieści się na jednej stronie A4 przy domyślnych ustawieniach w obu orientacjach. Szersze tabele są dzielone na części z powtórzonymi datami i nagłówkami. Długi tekst jest zawijany. Większa czcionka, wyższe wiersze lub długie wpisy mogą wymagać kolejnych stron. Aby zawsze drukować na jednej kartce, wybierz **Szerokie tabele → Zmieść na jednej stronie A4** — cała tabela zostanie proporcjonalnie zmniejszona, więc przy wielu osobach tekst będzie mniejszy.
+Standardowy arkusz dla trzech osób, z dwiema równymi kolumnami i miesiącem 28–31 dni, mieści się na jednej stronie A4 przy domyślnych ustawieniach w obu orientacjach. Szersze tabele są dzielone na części z powtórzonymi datami i nagłówkami. Długi tekst jest zawijany. Większa czcionka, wyższe wiersze lub długie wpisy mogą wymagać kolejnych stron. Aby zawsze drukować na jednej kartce, wybierz **Szerokie tabele → Zmieść na jednej stronie A4** — cała tabela zostanie proporcjonalnie zmniejszona, więc przy wielu osobach tekst będzie mniejszy. Opcja **Rozciągnij wiersze na całą stronę A4** (domyślnie włączona, w **Układzie tabeli**) powiększa wiersze dni tak, by tabela zajmowała całą wysokość kartki i było więcej miejsca na podpis; ustawiona wysokość wiersza działa wtedy jako minimum.
 
 Licznik nad tabelą podaje liczbę części wynikających z szerokości tabeli, a nie końcową liczbę kartek. Podgląd na ekranie służy do edycji; rzeczywisty układ wydruku sprawdzisz w oknie druku. Przycisk aplikacji i Ctrl+P przygotowują tę samą tabelę.
 
